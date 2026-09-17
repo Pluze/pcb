@@ -1,0 +1,40 @@
+{
+  "schematic": "Designs/Ionto_Current_Source_Core/archive/legacy_tps61040/Ionto_Current_Source_Core_TPS61040.kicad_sch",
+  "grid_mm": 1.27,
+  "escape_mm": 2.54,
+  "symbol_clearance_mm": 1.27,
+  "routing_margin_mm": 12.7,
+  "bend_cost": 40,
+  "schema_version": 1,
+  "source_of_truth": "pin-level connectivity; KiCad remains authoritative for reviewed symbol placement and presentation",
+  "blocks": {
+    "boost_compliance_supply": ["J1", "C1", "L1", "U1", "D1", "C2", "R1", "R2", "TP1"],
+    "reference_current_sink_and_output": ["R3", "U2", "U3", "C3", "R4", "Q1", "R5", "R6", "J2", "TP2"]
+  },
+  "nets": [
+    {"name": "SW", "endpoints": ["L1.2", "U1.1", "D1.2"]},
+    {"name": "FB", "endpoints": ["R1.2", "R2.1", "U1.3"]},
+    {"name": "VREF", "endpoints": ["R3.2", "U2.3", "U2.4", "U3.3"]},
+    {"name": "STIM_NEG", "endpoints": ["J2.2", "Q1.3"]},
+    {"name": "STIM_POS", "endpoints": ["R6.2", "J2.1"]},
+    {"name": "OPAMP_OUT", "endpoints": ["U3.1", "R4.1"]},
+    {"name": "GATE", "endpoints": ["R4.2", "Q1.1"]},
+    {"name": "ISENSE", "endpoints": ["Q1.2", "R5.1", "U3.4", "TP2.1"]},
+    {"name": "GND", "groups": [
+      {"block": "boost_input_ground", "endpoints": ["J1.2", "C1.2", "U1.2", "#FLG02.1"], "interface": {"x_mm": 35.56, "y_mm": 85.09, "orientation_degrees": 180}},
+      {"block": "boost_feedback_ground", "endpoints": ["C2.2", "R2.2"], "interface": {"x_mm": 137.16, "y_mm": 87.63, "orientation_degrees": 0}},
+      {"block": "reference_ground", "endpoints": ["U2.5"], "interface": {"x_mm": 90.17, "y_mm": 129.54, "orientation_degrees": 180}},
+      {"block": "decoupling_ground", "endpoints": ["C3.2"], "interface": {"x_mm": 114.3, "y_mm": 114.3, "orientation_degrees": 180}},
+      {"block": "opamp_ground", "endpoints": ["U3.2"], "interface": {"x_mm": 123.19, "y_mm": 142.24, "orientation_degrees": 90}},
+      {"block": "sense_ground", "endpoints": ["R5.2"], "interface": {"x_mm": 187.96, "y_mm": 160.02, "orientation_degrees": 270}}
+    ]},
+    {"name": "VBAT", "groups": [
+      {"block": "boost_compliance_supply", "endpoints": ["J1.1", "C1.1", "L1.1", "U1.5", "U1.4", "#FLG01.1"], "interface": {"x_mm": 35.56, "y_mm": 74.93, "orientation_degrees": 180}},
+      {"block": "reference_current_sink_and_output", "endpoints": ["R3.1", "U3.5", "C3.1"], "interface": {"x_mm": 43.18, "y_mm": 124.46, "orientation_degrees": 180}}
+    ]},
+    {"name": "VBOOST", "groups": [
+      {"block": "boost_compliance_supply", "endpoints": ["D1.1", "C2.1", "R1.1", "TP1.1"], "interface": {"x_mm": 154.94, "y_mm": 74.93, "orientation_degrees": 0}},
+      {"block": "reference_current_sink_and_output", "endpoints": ["R6.1"], "interface": {"x_mm": 162.56, "y_mm": 74.93, "orientation_degrees": 180}}
+    ]}
+  ]
+}

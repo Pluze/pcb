@@ -1,0 +1,4 @@
+(sym_lib_table
+  (version 7)
+
+  (lib (name "Ionto_Current_Source_Core") (type "KiCad") (uri "${KIPRJMOD}/Ionto_Current_Source_Core.kicad_sym") (options "") (descr "")))

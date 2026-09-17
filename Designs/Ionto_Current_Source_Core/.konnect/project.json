@@ -1,0 +1,16 @@
+{
+  "assembly": {
+    "default_passive_size": "0805"
+  },
+  "design_rules": [],
+  "fab_constraints": {
+    "layer_count": 1
+  },
+  "naming_conventions": {},
+  "sourcing": {
+    "preferred_distributors": [
+      "DigiKey",
+      "Mouser"
+    ]
+  }
+}
