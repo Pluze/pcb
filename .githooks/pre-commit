@@ -1,0 +1,4 @@
+#!/bin/sh
+set -eu
+
+exec python3 .agents/skills/pcb-repository-governance/scripts/check_repository_growth.py --report-worktree

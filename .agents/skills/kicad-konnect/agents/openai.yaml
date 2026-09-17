@@ -1,0 +1,4 @@
+interface:
+  display_name: "KiCad Konnect Operations"
+  short_description: "Operate Konnect safely and efficiently"
+  default_prompt: "Use $kicad-konnect for the KiCad tool operations required by this task, together with the relevant engineering skill."

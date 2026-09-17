@@ -1,0 +1,4 @@
+interface:
+  display_name: "PCB Repository Governance"
+  short_description: "Organize PCB projects, validation, and Git history"
+  default_prompt: "Use $pcb-repository-governance to organize this PCB repository, validate its publication boundaries, and preserve reusable engineering lessons."

@@ -1,0 +1,47 @@
+.DS_Store
+Thumbs.db
+
+# Repository-local scratch space
+.work/
+
+# KiCad locks, personal state, autosaves, and backups
+*.lck
+*.kicad_prl
+*.kicad_pro-bak
+*.kicad_sch-bak
+*.kicad_pcb-bak
+*-backups/
+_autosave-*
+**/.history/
+
+# Router and transient analysis artifacts
+*.dsn
+*.ses
+*.net
+*erc*.json
+*drc*.json
+
+# Disposable packaged, office, and media artifacts
+*.zip
+*.7z
+*.rar
+*.tar
+*.tar.gz
+*.tgz
+*.doc
+*.docx
+*.xls
+*.xlsx
+*.ppt
+*.pptx
+*.mp4
+*.mov
+*.avi
+*.mkv
+
+# Language and tool caches
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/

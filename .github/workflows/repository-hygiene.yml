@@ -1,0 +1,18 @@
+name: repository-hygiene
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  growth-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Check tracked files and reachable history
+        run: python3 .agents/skills/pcb-repository-governance/scripts/check_repository_growth.py --all-tracked --history
