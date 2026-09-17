@@ -1,0 +1,8 @@
+{
+  "design_rules": [
+    "Prefer a single copper routing layer for classroom and prototype boards. Use the widest practical traces and minimize vias. When a crossover is unavoidable, prefer a clearly documented zero-ohm resistor jumper with a footprint long enough to bridge the crossing; use a via only as a last resort."
+  ],
+  "fab_constraints": {},
+  "naming_conventions": {},
+  "sourcing": {}
+}
