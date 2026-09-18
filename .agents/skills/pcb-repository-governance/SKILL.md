@@ -89,6 +89,8 @@ If an inferred constraint materially changes safety, electrical behavior, cost, 
 ## Efficient Tool Use
 
 - Inspect first and choose the narrowest capable toolset.
+- Let repository state produce transient execution plans. Do not require a user-authored plan, duplicate project manifest, or scheduled task when the design files and repository contract already determine the work.
+- Prefer a tested goal-level controller when it can execute several deterministic phases behind one compact result. Keep its verbose logs and cache under ignored `.work/`, key reused evidence to content and tool inputs, and preserve per-phase failure identity.
 - Before creating or retaining a KiCad helper in any skill, inventory the current Konnect toolboxes and schemas for overlapping capability. Prefer native guarded operations; document and test the exact residual gap that justifies custom code.
 - Batch related reads, edits, and verification in one process when state permits.
 - Reuse schema discovery and project context during a bounded session.
@@ -149,11 +151,12 @@ Promote a lesson only when at least one condition holds:
 Then:
 
 1. identify the narrowest owner;
-2. write a general trigger, action, and validation outcome;
+2. express the reusable requirement as a tool-neutral workflow outcome, inputs, artifacts, and evidence;
 3. remove project-specific values unless they are essential examples;
-4. update coupled helpers and checks in the same change;
-5. test the revised workflow against the failure that motivated it;
-6. keep the skill in English and scan for accidental local paths or project-specific residue.
+4. re-discover existing capabilities before claiming a gap, then prefer a thin adapter or composition over a parallel API, protocol, or DSL;
+5. update the narrowest coupled helper and extend validation only for the demonstrated failure, safety risk, or acceptance requirement;
+6. test the revised workflow against the real failure that motivated it;
+7. keep the skill in English and scan for accidental local paths or project-specific residue.
 
 Do not promote guesses, one-off session corrections, or discarded experiments into durable policy.
 

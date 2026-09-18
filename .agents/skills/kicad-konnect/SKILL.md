@@ -7,6 +7,21 @@ description: Operate the local Konnect MCP server efficiently and safely for KiC
 
 This skill owns Konnect tool discovery, session efficiency, editor-lock safety, and reusable helper invocation. It does not own schematic architecture, component engineering, PCB layout policy, or acceptance criteria.
 
+## Goal-level autonomous entrypoint
+
+For repository-wide manufacturing validation, output refresh, or release readiness, prefer one invocation of `scripts/pcb_workflow.py` over model-orchestrated calls to each design and exporter:
+
+```bash
+python3 .agents/skills/kicad-konnect/scripts/pcb_workflow.py plan
+python3 .agents/skills/kicad-konnect/scripts/pcb_workflow.py validate
+python3 .agents/skills/kicad-konnect/scripts/pcb_workflow.py release-ready
+python3 .agents/skills/kicad-konnect/scripts/pcb_workflow.py release-ready --apply
+```
+
+The controller discovers active KiCad designs, derives a transient phase plan, keeps full per-phase logs under ignored `.work/pcb-workflow/`, emits one compact JSON record, and reuses successful read-only evidence only while its inputs remain unchanged. Use repeated `--design NAME` only to narrow an explicitly scoped request. `--apply` authorizes manufacturing-output refresh inside the requested goal; it never authorizes a commit, push, history rewrite, or unrelated design edit.
+
+Inspect a phase log only when the compact failure cannot be resolved from its error classification. Use the lower-level helpers directly for development, a narrowly selected package, or diagnosis of the failed phase.
+
 ## Route engineering work
 
 Read only the specialized skills needed for the task:
@@ -29,6 +44,10 @@ Do not infer that Konnect lacks a capability from the currently loaded `tools/li
 Only implement a fallback after this discovery sequence proves the capability is unavailable or materially insufficient. Record the missing boundary rather than describing Konnect broadly as lacking the feature.
 
 Apply the same discovery gate to existing repository helpers, not only to new code. Before a skill directs the agent to run or extend a helper for a KiCad operation, re-check the current Konnect toolbox descriptions and schemas because the server surface can evolve. Retire redundant mechanics or narrow the helper to the verified residual value, such as a topology algorithm, cross-tool orchestration, deterministic validation, or a guarded compatibility wrapper.
+
+Real engineering feedback must improve this capability layer. For a reproducible failure or newly required check: preserve the failure signature, re-discover the current tool surface, distinguish an unavailable operation from an indirect or unloaded one, then update the narrowest adapter, workflow, or validator and add a regression test. Expand validation only far enough to cover the demonstrated failure, safety risk, or acceptance contract.
+
+Keep reusable workflows tool-neutral at their boundary: define the engineering goal, required inputs, expected artifacts, and evidence before choosing Konnect, KiCad CLI, IPC, file parsing, or GUI automation as the implementation. Compose and thinly adapt existing capabilities. Do not create a competing IPC/MCP client model, general-purpose KiCad API, or new workflow DSL merely because one operation is inconvenient to call.
 
 Typical schematic toolsets: `sch_components`, `sch_wiring`, `sch_analysis`, `sch_batch`, `sch_export`.
 
@@ -107,6 +126,7 @@ For computer-use fallback, load the current automation documentation before the 
 - `scripts/validate_circuitpro_u4_package.py`: exact package/file, attribute, connected-contour, and drill-hit validation for supported U4 profiles.
 - `scripts/export_kapton_lightburn_templates.py`: PCB-driven millimetre DXF export from inferred solder-mask openings plus `Edge.Cuts`, with source-freshness audit and fitted AutoCAD extents/viewport metadata. KiCad's raw DXF can contain valid geometry but appear blank in AutoCAD because it omits extents and leaves the active view at a 1000 mm default around the origin.
 - `scripts/manage_manufacturing_outputs.py`: repository-wide discovery and audit/export of U4 and LightBurn outputs for every active design.
+- `scripts/pcb_workflow.py`: goal-level, self-discovered orchestration with compact JSON results, ignored phase logs, input-hash caching, and explicit mutation authority.
 
 These helpers are repository-wide capabilities only where they add behavior beyond the currently discovered Konnect surface. Revalidate that boundary before use or maintenance. Their design-specific input and measured results belong under the target design; their general algorithms and rules remain with the skill.
 

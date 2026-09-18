@@ -53,7 +53,7 @@ def find_cli(explicit: Path | None) -> Path:
 def run(command: list[str]) -> None:
     result = subprocess.run(command, capture_output=True, text=True)
     if result.returncode:
-        detail = (result.stderr or result.stdout).strip()
+        detail = (result.stderr or result.stdout).strip() or "no diagnostic output"
         raise RuntimeError(f"command failed: {' '.join(command)}\n{detail}")
 
 

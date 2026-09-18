@@ -28,11 +28,19 @@ Start searches in the owning repository directory or known configuration path. D
 - Do not load complete session logs, generated KiCad files, filled-zone polygon diffs, tool catalogs, or schemas when a structured query, semantic validator, or targeted excerpt answers the question. Review generated changes through source parameters, parsers, DRC/ERC, counts, and renders; inspect raw generated text only around unexplained differences.
 - For Git review, first classify files with name-status and statistics. Review ordinary source diffs directly. For large deterministic generated sections, account for the entire file through generation inputs plus semantic validation, while separately inspecting every hand-authored or unexplained change.
 
+## Prefer transaction boundaries
+
+When a repeatable goal requires several deterministic tool calls, move the loop behind one goal-level helper instead of asking the model to orchestrate every step. The helper should discover inputs, create its transient plan, execute bounded phases, retain verbose logs outside model context, and return one compact structured result. Cache only successful read-only evidence against explicit input and tool hashes; mutating phases still require the authority appropriate to their effects.
+
+Do not make the user maintain a plan that can be derived from repository state. Ask only for choices that cannot be inferred and that materially change the outcome.
+
+Treat helpers and validators as evolving capabilities. When real work exposes a reproducible gap, improve the narrowest workflow adapter or validator and add a regression check that proves the newly required behavior. Expand validation in response to demonstrated failure modes, safety risks, or acceptance requirements—not by accumulating speculative checks. Keep the workflow contract tool-neutral and reuse existing IPC, MCP, CLI, or file operations behind thin adapters rather than creating a shadow API or DSL.
+
 ## Load capabilities on demand
 
 For lazy tool systems, read the toolbox or capability summaries first. Load only the smallest plausible toolbox, then inspect only the schema of the candidate operation. Do not load every toolbox or repeat schema discovery in the same bounded session unless the server state or requirement changed.
 
-Batch related independent reads when their combined output remains small. Prefer one bounded mutation batch followed by one verification batch. Avoid large compound commands whose output mixes unrelated questions or obscures which producer failed.
+Batch related independent reads when their combined output remains small. Prefer one goal-level transaction, or one bounded mutation batch followed by one verification batch. Avoid compound commands whose output mixes unrelated questions; a transaction helper must preserve per-phase status and logs even when its model-visible result is compact.
 
 ## Reuse established state
 
