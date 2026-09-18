@@ -69,6 +69,7 @@ class WorkflowTests(unittest.TestCase):
                     "schematic-validation-Example",
                 ],
             )
+            self.assertFalse(any(phase.cacheable for phase in phases[1:]))
 
     def test_explicit_schematic_goal_rejects_design_without_topology(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -106,19 +107,6 @@ class WorkflowTests(unittest.TestCase):
             workflow.cache_key(phase, [alpha, beta]),
         )
 
-    def test_schematic_cache_tracks_topology_but_ignores_readme(self) -> None:
-        with tempfile.TemporaryDirectory() as directory:
-            root = Path(directory)
-            design = self.make_repo(root)
-            topology = design / "schematic_topology.json"
-            topology.write_text("{}\n", encoding="utf-8")
-            phase = workflow.Phase("schematic-validation-Example", cacheable=True)
-            first = workflow.fingerprint(root, [design], phase)
-            (design / "README.md").write_text("documentation only\n", encoding="utf-8")
-            self.assertEqual(first, workflow.fingerprint(root, [design], phase))
-            topology.write_text('{"changed": true}\n', encoding="utf-8")
-            self.assertNotEqual(first, workflow.fingerprint(root, [design], phase))
-
     def test_failure_classification_is_narrow_and_actionable(self) -> None:
         failure_class, action = workflow.classify_failure(134, "", "")
         self.assertEqual(failure_class, "execution-environment")
@@ -136,6 +124,14 @@ class WorkflowTests(unittest.TestCase):
                 1, "", "command failed: /Applications/KiCad/kicad-cli pcb drc | no diagnostic output",
             )[0],
             "execution-environment",
+        )
+        self.assertEqual(
+            workflow.classify_failure(1, "", "operation not permitted while running pcb drc")[0],
+            "execution-environment",
+        )
+        self.assertEqual(
+            workflow.classify_failure(1, "", "DRC violation on net SENSOR_NOT_FOUND")[0],
+            "validation",
         )
 
     @mock.patch.object(workflow.subprocess, "run")
@@ -160,6 +156,24 @@ class WorkflowTests(unittest.TestCase):
             (root / "README.md").write_text("unrelated\n", encoding="utf-8")
             self.assertEqual(first, workflow.fingerprint(root, [design], phase))
             (design / "Example.kicad_pcb").write_text("changed\n", encoding="utf-8")
+            self.assertNotEqual(first, workflow.fingerprint(root, [design], phase))
+
+    def test_manufacturing_cache_ignores_benchmark_but_tracks_validator(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            design = self.make_repo(root)
+            scripts = root / ".agents" / "skills" / "kicad-konnect" / "scripts"
+            for name in workflow.MANUFACTURING_AUDIT_SCRIPTS:
+                (scripts / name).write_text(f"# {name}\n", encoding="utf-8")
+            benchmark = scripts / "benchmark_pcb_workflow.py"
+            benchmark.write_text("# baseline\n", encoding="utf-8")
+            phase = workflow.Phase("manufacturing-audit", cacheable=True)
+            first = workflow.fingerprint(root, [design], phase)
+            benchmark.write_text("# unrelated benchmark change\n", encoding="utf-8")
+            self.assertEqual(first, workflow.fingerprint(root, [design], phase))
+            (scripts / "validate_circuitpro_u4_package.py").write_text(
+                "# validator changed\n", encoding="utf-8",
+            )
             self.assertNotEqual(first, workflow.fingerprint(root, [design], phase))
 
     @mock.patch.object(workflow.shutil, "which")

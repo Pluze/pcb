@@ -18,6 +18,15 @@ from pathlib import Path
 EXCLUDED_DIRS = {".git", ".work", "__pycache__", ".pytest_cache"}
 GOALS = ("schematic-validate", "validate", "manufacturing-refresh", "release-ready")
 MAX_ERROR_CHARS = 1200
+MANUFACTURING_AUDIT_SCRIPTS = (
+    "pcb_workflow.py",
+    "manage_manufacturing_outputs.py",
+    "manufacturing_discovery.py",
+    "manufacturing_transaction.py",
+    "export_circuitpro_u4_packages.py",
+    "export_kapton_lightburn_templates.py",
+    "validate_circuitpro_u4_package.py",
+)
 
 
 @dataclass(frozen=True)
@@ -156,7 +165,9 @@ def phase_plan(root: Path, goal: str, apply: bool, designs: list[Path]) -> list[
 
 def phase_inputs(root: Path, designs: list[Path], phase: Phase) -> list[Path]:
     paths: list[Path] = []
+    scripts = root / ".agents" / "skills" / "kicad-konnect" / "scripts"
     if phase.name == "design-contract":
+        paths.append(scripts / "pcb_workflow.py")
         for design in designs:
             paths.extend((
                 design / f"{design.name}.kicad_pro",
@@ -166,18 +177,9 @@ def phase_inputs(root: Path, designs: list[Path], phase: Phase) -> list[Path]:
                 design / "VALIDATION.md",
             ))
         return paths
-    scripts = root / ".agents" / "skills" / "kicad-konnect" / "scripts"
-    paths.extend(path for path in scripts.glob("*.py") if path.is_file())
-    if phase.name.startswith("schematic-"):
-        for design in designs:
-            for name in (
-                f"{design.name}.kicad_pro",
-                f"{design.name}.kicad_sch",
-                "schematic_topology.json",
-                "sym-lib-table",
-            ):
-                paths.append(design / name)
-            paths.extend(design.glob("*.kicad_sym"))
+    if phase.name == "manufacturing-audit":
+        paths.extend(scripts / name for name in MANUFACTURING_AUDIT_SCRIPTS)
+    else:
         return paths
     for design in designs:
         for candidate in design.rglob("*"):
@@ -239,6 +241,14 @@ def error_excerpt(stdout: str, stderr: str) -> str:
     return excerpt
 
 
+def is_silent_kicad_abort(returncode: int, stdout: str, stderr: str) -> bool:
+    message = f"{stdout}\n{stderr}".lower()
+    return (
+        ("kicad-cli" in message and "no diagnostic output" in message)
+        or (returncode in (134, -6) and not stdout.strip() and not stderr.strip())
+    )
+
+
 def classify_failure(returncode: int, stdout: str, stderr: str) -> tuple[str, str]:
     """Classify only stable failure signatures with an actionable next step."""
     message = f"{stdout}\n{stderr}".lower()
@@ -246,10 +256,15 @@ def classify_failure(returncode: int, stdout: str, stderr: str) -> tuple[str, st
         return "ipc-unavailable", "configure/open the intended KiCad IPC project or use a file-backed operation"
     if "lock file" in message or "cannot lock" in message or "already open" in message:
         return "editor-lock", "close the owning KiCad editor before file-backed mutation"
-    silent_kicad_abort = "kicad-cli" in message and "no diagnostic output" in message
-    if silent_kicad_abort or (returncode in (134, -6) and not stdout.strip() and not stderr.strip()):
+    if is_silent_kicad_abort(returncode, stdout, stderr):
         return "execution-environment", "rerun the absolute KiCad CLI command in the permitted execution context"
-    if "no such file" in message or "not found" in message:
+    if any(signature in message for signature in (
+        "operation not permitted", "permission denied", "sandbox",
+    )):
+        return "execution-environment", "rerun the command in the permitted execution context"
+    if any(signature in message for signature in (
+        "no such file or directory", "command not found", "kicad-cli not found",
+    )):
         return "missing-input", "verify the resolved executable and input paths"
     if "violation" in message or "drc" in message or "erc" in message:
         return "validation", "inspect the validator report and fix the design evidence"
@@ -281,7 +296,7 @@ def run_phase(phase: Phase, root: Path, log_path: Path) -> dict:
         failure_class, next_action = classify_failure(
             result.returncode, result.stdout, result.stderr,
         )
-        if failure_class == "execution-environment":
+        if is_silent_kicad_abort(result.returncode, result.stdout, result.stderr):
             error = "kicad-cli aborted without diagnostic output"
         elif not error:
             error = f"command exited {result.returncode} without diagnostic output"

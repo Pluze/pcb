@@ -38,6 +38,8 @@ Do not make the user maintain a plan that can be derived from repository state. 
 
 Treat helpers and validators as evolving capabilities. When real work exposes a reproducible gap, improve the narrowest workflow adapter or validator and add a regression check that proves the newly required behavior. Expand validation in response to demonstrated failure modes, safety risks, or acceptance requirements—not by accumulating speculative checks. Keep the workflow contract tool-neutral and reuse existing IPC, MCP, CLI, or file operations behind thin adapters rather than creating a shadow API or DSL.
 
+Key cached evidence to the narrow transitive inputs that can change that phase. Do not hash every sibling helper or test merely because it shares a directory; prove both that a relevant validator change invalidates the cache and that an unrelated workflow or benchmark change does not.
+
 When evaluating an orchestration or caching change, read [references/workflow-ab-testing.md](references/workflow-ab-testing.md). It defines coverage-first comparison, common and complex task portfolios, counterbalanced runs, token proxies, and the improvement loop.
 
 ## Load capabilities on demand
