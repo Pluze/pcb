@@ -6,8 +6,12 @@ from __future__ import annotations
 import argparse
 import csv
 import math
+import os
 import re
+import shutil
+import subprocess
 import sys
+import tempfile
 import uuid
 from dataclasses import dataclass
 from pathlib import Path
@@ -231,6 +235,39 @@ def write_board(path: Path, contents: str, force: bool) -> None:
     temporary.replace(path)
 
 
+def find_kicad_cli(explicit: Path | None) -> Path:
+    candidates = [explicit] if explicit else []
+    found = shutil.which("kicad-cli")
+    if found:
+        candidates.append(Path(found))
+    candidates.append(Path("/Applications/KiCad/KiCad.app/Contents/MacOS/kicad-cli"))
+    for candidate in candidates:
+        if candidate and candidate.is_file() and os.access(candidate, os.X_OK):
+            return candidate.resolve()
+    raise ValueError("kicad-cli not found; pass --kicad-cli PATH")
+
+
+def validate_with_kicad(cli: Path, planned: list[tuple[Path, str]]) -> None:
+    with tempfile.TemporaryDirectory(prefix="circular-contact-drc-") as directory:
+        root = Path(directory)
+        for output, contents in planned:
+            candidate = root / output.name
+            candidate.write_text(contents, encoding="utf-8")
+            report = root / f"{output.stem}-drc.json"
+            result = subprocess.run(
+                [
+                    str(cli), "pcb", "drc", "--output", str(report),
+                    "--format", "json", "--severity-error",
+                    "--exit-code-violations", str(candidate),
+                ],
+                capture_output=True,
+                text=True,
+            )
+            if result.returncode:
+                detail = (result.stderr or result.stdout).strip() or "no diagnostic output"
+                raise ValueError(f"{output.name}: KiCad DRC failed: {detail}")
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description=(
@@ -255,6 +292,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--edge-clearance", type=positive_number, default=DEFAULT_EDGE_CLEARANCE_MM)
     parser.add_argument("--via-diameter", type=positive_number, default=DEFAULT_VIA_DIAMETER_MM)
     parser.add_argument("--via-drill", type=positive_number, default=DEFAULT_VIA_DRILL_MM)
+    parser.add_argument("--drc", action="store_true", help="validate every candidate with KiCad DRC before writing")
+    parser.add_argument("--kicad-cli", type=Path)
     parser.add_argument("--force", action="store_true", help="replace existing output files atomically")
     return parser
 
@@ -292,6 +331,8 @@ def main() -> int:
             if output.exists() and not args.force:
                 raise FileExistsError(f"refusing to overwrite existing file without --force: {output}")
             planned.append((output, render_board(spec, stem, args.via_diameter, args.via_drill)))
+        if args.drc:
+            validate_with_kicad(find_kicad_cli(args.kicad_cli), planned)
         for output, contents in planned:
             write_board(output, contents, args.force)
             print(output)

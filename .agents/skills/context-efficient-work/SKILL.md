@@ -32,9 +32,13 @@ Start searches in the owning repository directory or known configuration path. D
 
 When a repeatable goal requires several deterministic tool calls, move the loop behind one goal-level helper instead of asking the model to orchestrate every step. The helper should discover inputs, create its transient plan, execute bounded phases, retain verbose logs outside model context, and return one compact structured result. Cache only successful read-only evidence against explicit input and tool hashes; mutating phases still require the authority appropriate to their effects.
 
+Do not add a transaction wrapper merely for uniformity when one direct operation already has bounded output and no missing atomicity, cache, permission, or validation boundary. Measure the fixed wrapper cost on narrow tasks as well as its benefit on long and repeated work.
+
 Do not make the user maintain a plan that can be derived from repository state. Ask only for choices that cannot be inferred and that materially change the outcome.
 
 Treat helpers and validators as evolving capabilities. When real work exposes a reproducible gap, improve the narrowest workflow adapter or validator and add a regression check that proves the newly required behavior. Expand validation in response to demonstrated failure modes, safety risks, or acceptance requirements—not by accumulating speculative checks. Keep the workflow contract tool-neutral and reuse existing IPC, MCP, CLI, or file operations behind thin adapters rather than creating a shadow API or DSL.
+
+When evaluating an orchestration or caching change, read [references/workflow-ab-testing.md](references/workflow-ab-testing.md). It defines coverage-first comparison, common and complex task portfolios, counterbalanced runs, token proxies, and the improvement loop.
 
 ## Load capabilities on demand
 

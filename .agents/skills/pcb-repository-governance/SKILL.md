@@ -155,8 +155,9 @@ Then:
 3. remove project-specific values unless they are essential examples;
 4. re-discover existing capabilities before claiming a gap, then prefer a thin adapter or composition over a parallel API, protocol, or DSL;
 5. update the narrowest coupled helper and extend validation only for the demonstrated failure, safety risk, or acceptance requirement;
-6. test the revised workflow against the real failure that motivated it;
-7. keep the skill in English and scan for accidental local paths or project-specific residue.
+6. when the change affects orchestration, caching, or output volume, run a coverage-first A/B comparison over the affected common, repeated, failure, and complex tasks;
+7. test the revised workflow against the real failure that motivated it;
+8. keep the skill in English and scan for accidental local paths or project-specific residue.
 
 Do not promote guesses, one-off session corrections, or discarded experiments into durable policy.
 

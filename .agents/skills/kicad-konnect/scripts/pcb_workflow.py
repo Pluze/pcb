@@ -16,7 +16,7 @@ from pathlib import Path
 
 
 EXCLUDED_DIRS = {".git", ".work", "__pycache__", ".pytest_cache"}
-GOALS = ("validate", "manufacturing-refresh", "release-ready")
+GOALS = ("schematic-validate", "validate", "manufacturing-refresh", "release-ready")
 MAX_ERROR_CHARS = 1200
 
 
@@ -30,6 +30,7 @@ class Phase:
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("goal", choices=("plan", *GOALS))
+    parser.add_argument("--for-goal", choices=GOALS, default="validate")
     parser.add_argument("--root", type=Path, default=Path.cwd())
     parser.add_argument("--design", action="append", default=[])
     parser.add_argument("--apply", action="store_true")
@@ -79,6 +80,18 @@ def validate_contract(designs: list[Path]) -> list[str]:
     return problems
 
 
+def topology_designs(designs: list[Path], explicitly_selected: bool) -> list[Path]:
+    selected = [design for design in designs if (design / "schematic_topology.json").is_file()]
+    if explicitly_selected and len(selected) != len(designs):
+        missing = sorted(design.name for design in designs if design not in selected)
+        raise ValueError(
+            "schematic-validate requires schematic_topology.json: " + ", ".join(missing)
+        )
+    if not selected:
+        raise ValueError("no topology-driven schematic designs found")
+    return selected
+
+
 def phase_plan(root: Path, goal: str, apply: bool, designs: list[Path]) -> list[Phase]:
     scripts = root / ".agents" / "skills" / "kicad-konnect" / "scripts"
     manage = scripts / "manage_manufacturing_outputs.py"
@@ -90,6 +103,30 @@ def phase_plan(root: Path, goal: str, apply: bool, designs: list[Path]) -> list[
         item for design in designs for item in ("--design", design.name)
     )
     phases = [Phase("design-contract", cacheable=True)]
+    if goal == "schematic-validate":
+        evidence = root / ".work" / "pcb-workflow" / "schematic"
+        router = scripts / "schematic_topology_router.py"
+        validator = scripts / "validate_schematic_design.py"
+        for design in designs:
+            topology = design / "schematic_topology.json"
+            phases.extend((
+                Phase(
+                    f"schematic-route-plan-{design.name}",
+                    (
+                        sys.executable, str(router), str(topology),
+                        "--plan", str(evidence / f"{design.name}-route-plan.json"),
+                    ),
+                ),
+                Phase(
+                    f"schematic-validation-{design.name}",
+                    (
+                        sys.executable, str(validator), str(topology),
+                        "--report", str(evidence / f"{design.name}-validation.json"),
+                        "--render", str(evidence / f"{design.name}-schematic.png"),
+                    ),
+                ),
+            ))
+        return phases
     if goal == "manufacturing-refresh" or (goal == "release-ready" and apply):
         phases.append(Phase(
             "manufacturing-export",
@@ -131,6 +168,17 @@ def phase_inputs(root: Path, designs: list[Path], phase: Phase) -> list[Path]:
         return paths
     scripts = root / ".agents" / "skills" / "kicad-konnect" / "scripts"
     paths.extend(path for path in scripts.glob("*.py") if path.is_file())
+    if phase.name.startswith("schematic-"):
+        for design in designs:
+            for name in (
+                f"{design.name}.kicad_pro",
+                f"{design.name}.kicad_sch",
+                "schematic_topology.json",
+                "sym-lib-table",
+            ):
+                paths.append(design / name)
+            paths.extend(design.glob("*.kicad_sym"))
+        return paths
     for design in designs:
         for candidate in design.rglob("*"):
             if not candidate.is_file() or any(part in EXCLUDED_DIRS for part in candidate.parts):
@@ -177,6 +225,11 @@ def write_cache(path: Path, cache: dict) -> None:
     temporary.replace(path)
 
 
+def cache_key(phase: Phase, designs: list[Path]) -> str:
+    scope = ",".join(path.name for path in designs)
+    return f"{phase.name}:{scope}"
+
+
 def error_excerpt(stdout: str, stderr: str) -> str:
     source = stderr if stderr.strip() else stdout
     lines = [line.strip() for line in source.splitlines() if line.strip()]
@@ -216,8 +269,10 @@ def run_phase(phase: Phase, root: Path, log_path: Path) -> dict:
 def execute(root: Path, goal: str, designs: list[Path], apply: bool, no_cache: bool) -> dict:
     if goal == "manufacturing-refresh" and not apply:
         raise ValueError("manufacturing-refresh changes generated outputs; pass --apply")
-    phases = phase_plan(root, goal, apply, designs)
     work = root / ".work" / "pcb-workflow"
+    if goal == "schematic-validate":
+        (work / "schematic").mkdir(parents=True, exist_ok=True)
+    phases = phase_plan(root, goal, apply, designs)
     run_id = time.strftime("%Y%m%d-%H%M%S") + f"-{os.getpid()}"
     run_dir = work / "runs" / run_id
     cache_path = work / "cache.json"
@@ -225,34 +280,57 @@ def execute(root: Path, goal: str, designs: list[Path], apply: bool, no_cache: b
     outcomes: list[dict] = []
 
     for phase in phases:
-        phase_hash = fingerprint(root, designs, phase)
-        if phase.cacheable and not no_cache and cache.get(phase.name) == phase_hash:
-            outcomes.append({"name": phase.name, "status": "pass", "cached": True})
-            continue
+        phase_key = cache_key(phase, designs) if phase.cacheable else None
+        if phase.cacheable:
+            phase_hash = fingerprint(root, designs, phase)
+            if not no_cache and cache.get(phase_key) == phase_hash:
+                outcomes.append({"name": phase.name, "status": "pass", "cached": True})
+                continue
         if phase.command is None:
             problems = validate_contract(designs)
             outcome = {"name": phase.name, "status": "fail" if problems else "pass"}
             if problems:
                 outcome["error"] = " | ".join(problems)[:MAX_ERROR_CHARS]
         else:
-            outcome = run_phase(phase, root, run_dir / f"{phase.name}.log")
+            safe_name = phase.name.replace(":", "-").replace("/", "-")
+            outcome = run_phase(phase, root, run_dir / f"{safe_name}.log")
         outcomes.append(outcome)
         if outcome["status"] != "pass":
             break
         if phase.cacheable:
-            cache[phase.name] = fingerprint(root, designs, phase)
+            assert phase_key is not None
+            cache[phase_key] = fingerprint(root, designs, phase)
             write_cache(cache_path, cache)
 
     status = "pass" if len(outcomes) == len(phases) and all(
         item["status"] == "pass" for item in outcomes
     ) else "fail"
-    result = {
+    details = {
         "status": status,
         "goal": goal,
         "designs": [path.name for path in designs],
         "phases": outcomes,
     }
     if run_dir.is_dir():
+        (run_dir / "summary.json").write_text(
+            json.dumps(details, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+    result = {
+        "status": status,
+        "goal": goal,
+        "designs": [path.name for path in designs],
+        "phases": {
+            item["name"]: "cached" if item.get("cached") else item["status"]
+            for item in outcomes
+        },
+    }
+    if status == "fail" and outcomes:
+        failed = outcomes[-1]
+        result["failed_phase"] = failed["name"]
+        if "error" in failed:
+            result["error"] = failed["error"]
+    if status == "fail" and run_dir.is_dir():
         result["log_dir"] = relative(run_dir, root)
     return result
 
@@ -262,7 +340,9 @@ def main() -> int:
     root = args.root.resolve()
     try:
         designs = discover_designs(root, args.design)
-        goal = "validate" if args.goal == "plan" else args.goal
+        goal = args.for_goal if args.goal == "plan" else args.goal
+        if goal == "schematic-validate":
+            designs = topology_designs(designs, bool(args.design))
         phases = phase_plan(root, goal, args.apply, designs)
         if args.goal == "plan":
             result = {

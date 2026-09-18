@@ -13,6 +13,7 @@ For repository-wide manufacturing validation, output refresh, or release readine
 
 ```bash
 python3 .agents/skills/kicad-konnect/scripts/pcb_workflow.py plan
+python3 .agents/skills/kicad-konnect/scripts/pcb_workflow.py schematic-validate --design <name>
 python3 .agents/skills/kicad-konnect/scripts/pcb_workflow.py validate
 python3 .agents/skills/kicad-konnect/scripts/pcb_workflow.py release-ready
 python3 .agents/skills/kicad-konnect/scripts/pcb_workflow.py release-ready --apply
@@ -48,6 +49,8 @@ Apply the same discovery gate to existing repository helpers, not only to new co
 Real engineering feedback must improve this capability layer. For a reproducible failure or newly required check: preserve the failure signature, re-discover the current tool surface, distinguish an unavailable operation from an indirect or unloaded one, then update the narrowest adapter, workflow, or validator and add a regression test. Expand validation only far enough to cover the demonstrated failure, safety risk, or acceptance contract.
 
 Keep reusable workflows tool-neutral at their boundary: define the engineering goal, required inputs, expected artifacts, and evidence before choosing Konnect, KiCad CLI, IPC, file parsing, or GUI automation as the implementation. Compose and thinly adapt existing capabilities. Do not create a competing IPC/MCP client model, general-purpose KiCad API, or new workflow DSL merely because one operation is inconvenient to call.
+
+When evaluating agent governance or a lifecycle workflow, read [references/lifecycle-evaluation.md](references/lifecycle-evaluation.md). It defines representative common and complex tasks for new circuits, new PCBs, existing-design verification, manufacturing, release, and capability discovery, with independent artifact-based acceptance.
 
 Typical schematic toolsets: `sch_components`, `sch_wiring`, `sch_analysis`, `sch_batch`, `sch_export`.
 
@@ -127,6 +130,7 @@ For computer-use fallback, load the current automation documentation before the 
 - `scripts/export_kapton_lightburn_templates.py`: PCB-driven millimetre DXF export from inferred solder-mask openings plus `Edge.Cuts`, with source-freshness audit and fitted AutoCAD extents/viewport metadata. KiCad's raw DXF can contain valid geometry but appear blank in AutoCAD because it omits extents and leaves the active view at a 1000 mm default around the origin.
 - `scripts/manage_manufacturing_outputs.py`: repository-wide discovery and audit/export of U4 and LightBurn outputs for every active design.
 - `scripts/pcb_workflow.py`: goal-level, self-discovered orchestration with compact JSON results, ignored phase logs, input-hash caching, and explicit mutation authority.
+- `scripts/benchmark_pcb_workflow.py`: counterbalanced A/B coverage for full and scoped manufacturing checks, unchanged repeats, topology-driven schematic validation, new generated PCB plus DRC, and release readiness. Reports stay under ignored `.work/pcb-workflow/benchmarks/`.
 
 These helpers are repository-wide capabilities only where they add behavior beyond the currently discovered Konnect surface. Revalidate that boundary before use or maintenance. Their design-specific input and measured results belong under the target design; their general algorithms and rules remain with the skill.
 

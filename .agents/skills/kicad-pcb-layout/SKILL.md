@@ -46,7 +46,7 @@ Record measured results and waivers in the design's `VALIDATION.md`; keep reusab
 
 ## Parametric circular contact boards
 
-For a square two-layer connector coupon with one exposed circular contact on each side and a central through interconnect, use `scripts/generate_circular_contact_board.py`. The required parameters are front contact diameter, back contact diameter, and square board side, all in millimetres. The helper emits deterministic KiCad PCB files, keeps paste off the contact surfaces, names both pads and the via `CONTACT`, validates copper-to-edge margin and via geometry, supports repeatable `--spec` and CSV batches, and refuses accidental overwrite unless `--force` is explicit.
+For a square two-layer connector coupon with one exposed circular contact on each side and a central through interconnect, use `scripts/generate_circular_contact_board.py`. The required parameters are front contact diameter, back contact diameter, and square board side, all in millimetres. The helper emits deterministic KiCad PCB files, keeps paste off the contact surfaces, names both pads and the via `CONTACT`, validates copper-to-edge margin and via geometry, supports repeatable `--spec` and CSV batches, and refuses accidental overwrite unless `--force` is explicit. Use `--drc` when creating a new deliverable so every candidate must pass KiCad DRC in temporary staging before any final file is written.
 
 Keep the three geometric inputs as the primary interface. Treat via geometry and minimum copper-to-edge clearance as advanced manufacturing parameters, validate every generated family member, and do not assume that one DRC result covers the batch.
 

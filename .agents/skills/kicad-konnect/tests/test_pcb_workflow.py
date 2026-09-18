@@ -55,6 +55,28 @@ class WorkflowTests(unittest.TestCase):
             self.assertIn("--design", phases[1].command)
             self.assertIn("Example", phases[1].command)
 
+    def test_schematic_goal_builds_route_and_validation_phases(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            design = self.make_repo(root)
+            (design / "schematic_topology.json").write_text("{}\n", encoding="utf-8")
+            phases = workflow.phase_plan(root, "schematic-validate", False, [design])
+            self.assertEqual(
+                [phase.name for phase in phases],
+                [
+                    "design-contract",
+                    "schematic-route-plan-Example",
+                    "schematic-validation-Example",
+                ],
+            )
+
+    def test_explicit_schematic_goal_rejects_design_without_topology(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            design = self.make_repo(root)
+            with self.assertRaisesRegex(ValueError, "requires schematic_topology.json"):
+                workflow.topology_designs([design], explicitly_selected=True)
+
     def test_refresh_requires_explicit_apply(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -69,10 +91,20 @@ class WorkflowTests(unittest.TestCase):
             phase = workflow.Phase("design-contract", cacheable=True)
             first = workflow.fingerprint(root, [design], phase)
             cache_path = root / ".work" / "pcb-workflow" / "cache.json"
-            workflow.write_cache(cache_path, {phase.name: first})
-            self.assertEqual(workflow.read_cache(cache_path)[phase.name], first)
+            key = workflow.cache_key(phase, [design])
+            workflow.write_cache(cache_path, {key: first})
+            self.assertEqual(workflow.read_cache(cache_path)[key], first)
             (design / "README.md").write_text("changed\n", encoding="utf-8")
             self.assertNotEqual(first, workflow.fingerprint(root, [design], phase))
+
+    def test_cache_keys_are_isolated_by_design_scope(self) -> None:
+        phase = workflow.Phase("manufacturing-audit", cacheable=True)
+        alpha = Path("Designs/Alpha")
+        beta = Path("Designs/Beta")
+        self.assertNotEqual(
+            workflow.cache_key(phase, [alpha]),
+            workflow.cache_key(phase, [alpha, beta]),
+        )
 
     def test_manufacturing_fingerprint_ignores_unrelated_docs_but_tracks_board(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -126,6 +158,43 @@ class WorkflowTests(unittest.TestCase):
             payload = json.loads(lines[0])
             self.assertEqual(payload["status"], "planned")
             self.assertLess(len(result.stdout), 1000)
+
+    def test_cli_can_plan_schematic_goal_without_running_it(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            design = self.make_repo(root)
+            (design / "schematic_topology.json").write_text("{}\n", encoding="utf-8")
+            result = subprocess.run(
+                [
+                    sys.executable, str(SCRIPT), "plan", "--for-goal",
+                    "schematic-validate", "--root", str(root),
+                ],
+                capture_output=True,
+                text=True,
+                check=True,
+            )
+            payload = json.loads(result.stdout)
+            self.assertEqual(payload["goal"], "schematic-validate")
+            self.assertIn("schematic-validation-Example", payload["phases"])
+
+    @mock.patch.object(workflow, "run_phase")
+    def test_success_result_is_compact_while_details_stay_in_work_dir(self, run: mock.Mock) -> None:
+        def successful_phase(phase: object, root: Path, log_path: Path) -> dict[str, object]:
+            log_path.parent.mkdir(parents=True, exist_ok=True)
+            return {"name": phase.name, "status": "pass", "duration_ms": 5}
+
+        run.side_effect = successful_phase
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            design = self.make_repo(root)
+            result = workflow.execute(root, "validate", [design], False, True)
+            self.assertEqual(
+                result["phases"],
+                {"design-contract": "pass", "manufacturing-audit": "pass"},
+            )
+            self.assertNotIn("log_dir", result)
+            summaries = list((root / ".work" / "pcb-workflow" / "runs").glob("*/summary.json"))
+            self.assertEqual(len(summaries), 1)
 
 
 if __name__ == "__main__":
