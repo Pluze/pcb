@@ -52,12 +52,11 @@
       "visual_assets": {
         "pcb_3d_render": {
           "background": "transparent",
-          "filled_zone_high_quality_fallback": {
-            "light_bottom": 0.0,
-            "light_camera": 0.35,
-            "light_side": 0.05,
-            "light_side_elevation_deg": 85,
-            "light_top": 0.0
+          "filled_zone_render_workaround": {
+            "method": "same_camera_component_mask_composite",
+            "quality": "basic",
+            "refilled_zone_background_required": true,
+            "shadows": false
           },
           "floor": false,
           "projection": "orthogonal",
