@@ -106,6 +106,51 @@ class WorkflowTests(unittest.TestCase):
             workflow.cache_key(phase, [alpha, beta]),
         )
 
+    def test_schematic_cache_tracks_topology_but_ignores_readme(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            design = self.make_repo(root)
+            topology = design / "schematic_topology.json"
+            topology.write_text("{}\n", encoding="utf-8")
+            phase = workflow.Phase("schematic-validation-Example", cacheable=True)
+            first = workflow.fingerprint(root, [design], phase)
+            (design / "README.md").write_text("documentation only\n", encoding="utf-8")
+            self.assertEqual(first, workflow.fingerprint(root, [design], phase))
+            topology.write_text('{"changed": true}\n', encoding="utf-8")
+            self.assertNotEqual(first, workflow.fingerprint(root, [design], phase))
+
+    def test_failure_classification_is_narrow_and_actionable(self) -> None:
+        failure_class, action = workflow.classify_failure(134, "", "")
+        self.assertEqual(failure_class, "execution-environment")
+        self.assertIn("permitted execution context", action)
+        self.assertEqual(
+            workflow.classify_failure(1, "", "No KiCad IPC socket found")[0],
+            "ipc-unavailable",
+        )
+        self.assertEqual(
+            workflow.classify_failure(1, "", "DRC violation detected")[0],
+            "validation",
+        )
+        self.assertEqual(
+            workflow.classify_failure(
+                1, "", "command failed: /Applications/KiCad/kicad-cli pcb drc | no diagnostic output",
+            )[0],
+            "execution-environment",
+        )
+
+    @mock.patch.object(workflow.subprocess, "run")
+    def test_empty_abort_has_compact_failure_signature(self, run: mock.Mock) -> None:
+        run.return_value = mock.Mock(returncode=-6, stdout="", stderr="")
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            outcome = workflow.run_phase(
+                workflow.Phase("drc", ("kicad-cli", "pcb", "drc")),
+                root,
+                root / "phase.log",
+            )
+        self.assertEqual(outcome["failure_class"], "execution-environment")
+        self.assertEqual(outcome["error"], "kicad-cli aborted without diagnostic output")
+
     def test_manufacturing_fingerprint_ignores_unrelated_docs_but_tracks_board(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -116,6 +161,37 @@ class WorkflowTests(unittest.TestCase):
             self.assertEqual(first, workflow.fingerprint(root, [design], phase))
             (design / "Example.kicad_pcb").write_text("changed\n", encoding="utf-8")
             self.assertNotEqual(first, workflow.fingerprint(root, [design], phase))
+
+    @mock.patch.object(workflow.shutil, "which")
+    def test_manufacturing_cache_tracks_kicad_executable(self, which: mock.Mock) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            design = self.make_repo(root)
+            cli = root / "kicad-cli"
+            cli.write_text("version one\n", encoding="utf-8")
+            which.return_value = str(cli)
+            phase = workflow.Phase("manufacturing-audit", cacheable=True)
+            first = workflow.fingerprint(root, [design], phase)
+            cli.write_text("version two is different\n", encoding="utf-8")
+            self.assertNotEqual(first, workflow.fingerprint(root, [design], phase))
+
+    @mock.patch.object(workflow, "run_phase")
+    def test_failed_phase_is_not_cached(self, run: mock.Mock) -> None:
+        run.return_value = {
+            "name": "manufacturing-audit",
+            "status": "fail",
+            "error": "injected failure",
+        }
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            design = self.make_repo(root)
+            result = workflow.execute(root, "validate", [design], False, False)
+            cache = workflow.read_cache(root / ".work" / "pcb-workflow" / "cache.json")
+            self.assertEqual(result["status"], "fail")
+            self.assertNotIn(
+                workflow.cache_key(workflow.Phase("manufacturing-audit"), [design]),
+                cache,
+            )
 
     @mock.patch.object(workflow.subprocess, "run")
     def test_phase_keeps_verbose_output_in_log_and_returns_small_failure(self, run: mock.Mock) -> None:

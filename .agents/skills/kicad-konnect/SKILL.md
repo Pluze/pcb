@@ -125,8 +125,9 @@ For computer-use fallback, load the current automation documentation before the 
 - `scripts/schematic_topology_router.py`: dry-run and apply topology-driven orthogonal schematic routing.
 - `scripts/validate_schematic_design.py`: topology, geometry, connectivity, ERC, and render validation.
 - `scripts/manufacturing_discovery.py`: discovers publishable boards by repository convention and derives copper sides, mask sides, semantic coupon-cut layers, and drill/contour counts directly from each `.kicad_pcb`.
+- `scripts/manufacturing_transaction.py`: stages a complete manufacturing-directory batch, preserves a temporary backup, and rolls every installed or displaced directory back when an in-process replacement fails.
 - `scripts/export_circuitpro_u4_packages.py`: PCB-driven RP 1.x export with target-aligned naming, DRC, validation, source-freshness audit, and recoverable replacement.
-- `scripts/validate_circuitpro_u4_package.py`: exact package/file, attribute, connected-contour, and drill-hit validation for supported U4 profiles.
+- `scripts/validate_circuitpro_u4_package.py`: exact package/file, Gerber/Excellon termination structure, attribute, connected-contour, and drill-hit validation for supported U4 profiles.
 - `scripts/export_kapton_lightburn_templates.py`: PCB-driven millimetre DXF export from inferred solder-mask openings plus `Edge.Cuts`, with source-freshness audit and fitted AutoCAD extents/viewport metadata. KiCad's raw DXF can contain valid geometry but appear blank in AutoCAD because it omits extents and leaves the active view at a 1000 mm default around the origin.
 - `scripts/manage_manufacturing_outputs.py`: repository-wide discovery and audit/export of U4 and LightBurn outputs for every active design.
 - `scripts/pcb_workflow.py`: goal-level, self-discovered orchestration with compact JSON results, ignored phase logs, input-hash caching, and explicit mutation authority.

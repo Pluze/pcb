@@ -4,7 +4,6 @@
 from __future__ import annotations
 
 import argparse
-import datetime as dt
 import os
 import re
 import shutil
@@ -14,6 +13,7 @@ import tempfile
 from pathlib import Path
 
 from manufacturing_discovery import discover_packages
+from manufacturing_transaction import replace_directories
 
 
 SIDE_CONFIG = {
@@ -239,30 +239,10 @@ def stale_directories(packages: list[dict]) -> list[Path]:
 
 
 def replace(packages: list[dict], generated: dict[str, Path], force: bool, clean_stale: bool) -> Path | None:
-    existing_paths = [item["output"] for item in packages if item["output"].exists()]
     stale = stale_directories(packages) if clean_stale else []
-    affected = existing_paths + stale
-    if affected and not force:
-        raise ValueError("output exists; rerun export with --force after reviewing the audit")
-    backup = None
-    if affected:
-        stamp = dt.datetime.now().strftime("%Y%m%d-%H%M%S")
-        backup = Path(tempfile.mkdtemp(prefix=f"kapton-lightburn-backup-{stamp}-"))
-        for path in affected:
-            shutil.copytree(path, backup / path.name)
-    for path in stale:
-        shutil.rmtree(path)
-    for item in packages:
-        output = item["output"]
-        replacement = output.parent / f".{item['name']}.lightburn-new"
-        output.parent.mkdir(parents=True, exist_ok=True)
-        if replacement.exists():
-            shutil.rmtree(replacement)
-        shutil.copytree(generated[item["name"]], replacement)
-        if output.exists():
-            shutil.rmtree(output)
-        replacement.rename(output)
-    return backup
+    return replace_directories(
+        packages, generated, force=force, stale=stale, kind="kapton-lightburn",
+    )
 
 
 def main() -> int:

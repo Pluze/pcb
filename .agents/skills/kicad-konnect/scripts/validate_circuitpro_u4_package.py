@@ -19,6 +19,11 @@ GERBER_DRAW = re.compile(
     r"^(?:G0[123])?(?:X(?P<x>-?\d+))?(?:Y(?P<y>-?\d+))?"
     r"(?:I-?\d+)?(?:J-?\d+)?D0?(?P<op>[12])\*$"
 )
+GERBER_FORMAT = re.compile(r"^%FS.*\*%$", re.MULTILINE)
+GERBER_UNITS = re.compile(r"^%MO(?:MM|IN)\*%$", re.MULTILINE)
+GERBER_APERTURE = re.compile(r"^%ADD\d+", re.MULTILINE)
+DRILL_UNITS = re.compile(r"^(?:METRIC|INCH)(?:,.*)?$", re.MULTILINE)
+DRILL_TOOL = re.compile(r"^T\d+C", re.MULTILINE)
 
 
 def nonnegative_int(value: str) -> int:
@@ -95,6 +100,32 @@ def contour_components(content: str) -> tuple[int, int]:
     return components, open_components
 
 
+def validate_gerber_structure(name: str, content: str, errors: list[str]) -> None:
+    if not GERBER_FORMAT.search(content):
+        fail(errors, f"Gerber coordinate format is missing in {name}")
+    if not GERBER_UNITS.search(content):
+        fail(errors, f"Gerber units are missing in {name}")
+    if not GERBER_APERTURE.search(content):
+        fail(errors, f"Gerber aperture table is missing in {name}")
+    lines = [line.strip() for line in content.splitlines() if line.strip()]
+    if not lines or lines[-1] != "M02*":
+        fail(errors, f"Gerber end-of-file marker is missing in {name}")
+
+
+def validate_drill_structure(name: str, content: str, errors: list[str]) -> None:
+    lines = [line.strip() for line in content.splitlines() if line.strip()]
+    if not lines or lines[0] != "M48":
+        fail(errors, f"Excellon header is missing in {name}")
+    if not DRILL_UNITS.search(content):
+        fail(errors, f"Excellon units are missing in {name}")
+    if "%" not in lines:
+        fail(errors, f"Excellon header terminator is missing in {name}")
+    if any(DRILL_COORDINATE.match(line) for line in lines) and not DRILL_TOOL.search(content):
+        fail(errors, f"Excellon tool table is missing in {name}")
+    if not lines or lines[-1] != "M30":
+        fail(errors, f"Excellon end-of-file marker is missing in {name}")
+
+
 def main() -> int:
     args = parse_args()
     directory = args.directory.resolve()
@@ -118,8 +149,13 @@ def main() -> int:
         contents[name] = read_text(directory / name, errors)
 
     for name, content in contents.items():
-        if Path(name).suffix.lower() in GERBER_SUFFIXES and re.search(r"\bTO[.,]", content):
-            fail(errors, f"X2 object/net attribute found in {name}")
+        suffix = Path(name).suffix.lower()
+        if suffix in GERBER_SUFFIXES:
+            validate_gerber_structure(name, content, errors)
+            if re.search(r"\bTO[.,]", content):
+                fail(errors, f"X2 object/net attribute found in {name}")
+        elif suffix == ".drl":
+            validate_drill_structure(name, content, errors)
 
     board_outline = contents.get("BoardOutline.gm1", "")
     outline_count, outline_open = contour_components(board_outline)

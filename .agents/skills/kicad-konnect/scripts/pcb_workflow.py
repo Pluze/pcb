@@ -239,6 +239,23 @@ def error_excerpt(stdout: str, stderr: str) -> str:
     return excerpt
 
 
+def classify_failure(returncode: int, stdout: str, stderr: str) -> tuple[str, str]:
+    """Classify only stable failure signatures with an actionable next step."""
+    message = f"{stdout}\n{stderr}".lower()
+    if "no kicad ipc socket found" in message or "ipc_socket_path" in message:
+        return "ipc-unavailable", "configure/open the intended KiCad IPC project or use a file-backed operation"
+    if "lock file" in message or "cannot lock" in message or "already open" in message:
+        return "editor-lock", "close the owning KiCad editor before file-backed mutation"
+    silent_kicad_abort = "kicad-cli" in message and "no diagnostic output" in message
+    if silent_kicad_abort or (returncode in (134, -6) and not stdout.strip() and not stderr.strip()):
+        return "execution-environment", "rerun the absolute KiCad CLI command in the permitted execution context"
+    if "no such file" in message or "not found" in message:
+        return "missing-input", "verify the resolved executable and input paths"
+    if "violation" in message or "drc" in message or "erc" in message:
+        return "validation", "inspect the validator report and fix the design evidence"
+    return "command", "inspect the phase log before changing a retry precondition"
+
+
 def run_phase(phase: Phase, root: Path, log_path: Path) -> dict:
     started = time.monotonic()
     result = subprocess.run(
@@ -261,8 +278,17 @@ def run_phase(phase: Phase, root: Path, log_path: Path) -> dict:
     }
     if result.returncode:
         error = error_excerpt(result.stdout, result.stderr)
+        failure_class, next_action = classify_failure(
+            result.returncode, result.stdout, result.stderr,
+        )
+        if failure_class == "execution-environment":
+            error = "kicad-cli aborted without diagnostic output"
+        elif not error:
+            error = f"command exited {result.returncode} without diagnostic output"
         error = error.replace(str(root.resolve()), ".").replace(str(Path.home()), "~")
         outcome["error"] = error
+        outcome["failure_class"] = failure_class
+        outcome["next_action"] = next_action
     return outcome
 
 
@@ -330,6 +356,9 @@ def execute(root: Path, goal: str, designs: list[Path], apply: bool, no_cache: b
         result["failed_phase"] = failed["name"]
         if "error" in failed:
             result["error"] = failed["error"]
+        if "failure_class" in failed:
+            result["failure_class"] = failed["failure_class"]
+            result["next_action"] = failed["next_action"]
     if status == "fail" and run_dir.is_dir():
         result["log_dir"] = relative(run_dir, root)
     return result
