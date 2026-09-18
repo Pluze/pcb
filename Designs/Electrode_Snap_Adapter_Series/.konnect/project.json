@@ -1,0 +1,8 @@
+{
+  "manufacturing": {
+    "copper_pour_variants": {
+      "enabled": false,
+      "reason": "The contact coupons intentionally contain only isolated CONTACT geometry and no GND net."
+    }
+  }
+}

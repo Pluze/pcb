@@ -13,6 +13,13 @@ EXPORTERS = (
     "export_circuitpro_u4_packages.py",
     "export_kapton_lightburn_templates.py",
 )
+VARIANT_GENERATOR = "generate_copper_pour_variants.py"
+
+
+def cleanup_variant_personal_state(design: Path) -> None:
+    """Remove KiCad per-user state created while validating generated variants."""
+    for path in (design / "variants").glob("*.kicad_prl"):
+        path.unlink()
 
 
 def parse_args() -> argparse.Namespace:
@@ -44,13 +51,24 @@ def main() -> int:
         return 1
 
     for design in designs:
-        for exporter in EXPORTERS:
-            command = [sys.executable, str(script_dir / exporter), args.mode, str(design)]
+        try:
+            variant_command = [
+                sys.executable, str(script_dir / VARIANT_GENERATOR), args.mode, str(design),
+            ]
             if args.mode == "export" and args.force:
-                command.append("--force")
-            result = subprocess.run(command)
+                variant_command.append("--force")
+            result = subprocess.run(variant_command)
             if result.returncode:
                 return result.returncode
+            for exporter in EXPORTERS:
+                command = [sys.executable, str(script_dir / exporter), args.mode, str(design)]
+                if args.mode == "export" and args.force:
+                    command.append("--force")
+                result = subprocess.run(command)
+                if result.returncode:
+                    return result.returncode
+        finally:
+            cleanup_variant_personal_state(design)
     return 0
 
 

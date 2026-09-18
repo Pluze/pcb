@@ -2589,4 +2589,29 @@
 	)
 
 	(embedded_fonts no)
+
+	(zone
+		(net "GND")
+		(layer "F.Cu")
+		(uuid "ba371783-98fc-5993-b624-354c3d929010")
+		(name "GND_TOP")
+		(hatch edge 0.508)
+		(connect_pads
+			(clearance 1)
+		)
+		(min_thickness 0.25)
+		(fill yes
+			(thermal_gap 0.5)
+			(thermal_bridge_width 0.5)
+			(island_removal_mode 0)
+		)
+		(polygon
+			(pts
+				(xy 21 21)
+				(xy 46 21)
+				(xy 46 39)
+				(xy 21 39)
+			)
+		)
+	)
 )

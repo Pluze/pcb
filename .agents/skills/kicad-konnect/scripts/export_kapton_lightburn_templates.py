@@ -196,6 +196,13 @@ def validate_dxf(path: Path, mask_layer: str) -> None:
 def build(cli: Path, package: dict, root: Path) -> Path:
     staging = root / package["name"]
     staging.mkdir()
+    board = root / f"{package['name']}-export.kicad_pcb"
+    shutil.copy2(package["board"], board)
+    run([
+        str(cli), "pcb", "drc", "--refill-zones", "--save-board",
+        "--output", str(root / f"{package['name']}-drc.json"), "--format", "json",
+        "--severity-error", "--exit-code-violations", str(board),
+    ])
     for side in package["sides"]:
         mask_layer, filename = SIDE_CONFIG[side]
         output = staging / filename
@@ -208,7 +215,7 @@ def build(cli: Path, package: dict, root: Path) -> Path:
         # KiCad 10's DXF exporter has no mirror switch. Keep back geometry in
         # board coordinates; fixture/tape transfer orientation determines
         # whether the operator must flip it horizontally in LightBurn.
-        command.append(str(package["board"]))
+        command.append(str(board))
         run(command)
         add_autocad_view(output)
         validate_dxf(output, mask_layer)

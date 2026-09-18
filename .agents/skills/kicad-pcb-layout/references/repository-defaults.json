@@ -1,0 +1,86 @@
+{
+  "default_profile": "u4_single_sided_hand_soldered",
+  "profiles": {
+    "u4_single_sided_hand_soldered": {
+      "copper_pour": {
+        "clearance_mm": 1.0,
+        "edge_inset_mm": 1.0,
+        "layer": "F.Cu",
+        "minimum_fill_thickness_mm": 0.25,
+        "net": "GND",
+        "thermal_gap_mm": 0.5,
+        "thermal_spoke_width_mm": 0.5,
+        "zone_must_not_complete_unrouted_connections": true
+      },
+      "layout": {
+        "component_side": "front",
+        "layer_count": 1,
+        "priorities": [
+          "fixed_mechanics_and_connector_access",
+          "short_functional_and_return_paths",
+          "compact_switching_and_power_loops",
+          "hand_soldering_access",
+          "minimum_board_area_without_crowding"
+        ],
+        "via_budget": 0
+      },
+      "manufacturing": {
+        "copper_pour_variants": {
+          "default": "no_pour",
+          "enabled_for_production_unless_opted_out": true,
+          "no_pour_suffix": "No_Pour",
+          "with_pour_suffix": "With_Pour"
+        },
+        "optimize_for": [
+          "low_u4_copper_removal_area",
+          "short_processing_time",
+          "reviewable_single_board_imports"
+        ]
+      },
+      "routing": {
+        "default_clearance_mm": 0.25,
+        "default_track_width_mm": 0.25,
+        "explicit_ground_routing_required": true,
+        "minimum_track_width_mm": 0.25,
+        "net_class_track_widths_mm": {
+          "controlled_current": 0.6,
+          "power": 0.8,
+          "switching": 1.0
+        },
+        "shorter_local_pad_escapes_allowed": true
+      },
+      "visual_assets": {
+        "pcb_3d_render": {
+          "background": "transparent",
+          "filled_zone_high_quality_fallback": {
+            "light_bottom": 0.0,
+            "light_camera": 0.35,
+            "light_side": 0.05,
+            "light_side_elevation_deg": 85,
+            "light_top": 0.0
+          },
+          "floor": false,
+          "projection": "orthogonal",
+          "quality": "basic"
+        },
+        "purpose": "clear_engineering_preview_without_decorative_floor_shadows"
+      },
+      "workflow": {
+        "sequence": [
+          "place_for_functional_paths",
+          "route_all_nets_without_copper_pour",
+          "drc_no_pour_connectivity_gate",
+          "refill_copper_pour_variant",
+          "drc_with_pour_gate",
+          "generate_and_audit_manufacturing_variants"
+        ],
+        "validation_gates": {
+          "max_drc_errors": 0,
+          "max_unconnected_items": 0,
+          "no_pour_must_pass_before_pour": true
+        }
+      }
+    }
+  },
+  "schema_version": 2
+}

@@ -71,6 +71,8 @@ In decimal mode, a displayed drill-artwork size such as `1 x 1 mm` is the geomet
 
 Use a separate machine-input directory for each independently imported board or variant. The directory name identifies the design or variant, so filenames inside it can remain short, ASCII-only, and role-based.
 
+Run the project manufacturing controller rather than exporting a primary board directly. The primary PCB is the routing-only source and default package. Unless the design carries an explicit no-pour exception, the controller derives a with-pour production variant from the repository layout profile, refills and DRCs it in temporary staging, and exports both packages. Validate the primary board first and stop on any unconnected item before evaluating the pour. For laser structuring, do not assume that omitting the pour is faster: the time depends on the copper-removal strategy and material recipe in CircuitPro, so compare the imported jobs' estimated processing time; a narrower reviewed isolation moat generally reduces ablated area when the process removes that moat.
+
 For the verified CircuitPro RP 1.0 workflow, make each basename identical to its target so the operator can audit the import row without translating names:
 
 - `TopLayer.gtl`
@@ -92,7 +94,7 @@ Classify holes by electrical design intent, not by whether this fabrication run 
 
 ## Delivery validation
 
-Run `scripts/export_circuitpro_u4_packages.py audit DESIGN_DIR` or `export DESIGN_DIR --force`. Do not duplicate PCB facts in a package manifest. The shared discovery helper reads each `.kicad_pcb`, derives used copper and mask sides, detects the semantic `Coupon.Cuts` user layer, and independently counts source drill hits and closed coupon contours. Repository convention selects `variants/*.kicad_pcb` and `panels/*.kicad_pcb` when present; otherwise it selects the design's matching root PCB. The exporter owns KiCad CLI arguments, target-aligned filenames, empty-drill omission, package replacement, and source-freshness comparison. Its validator counts connected Gerber contours rather than raw pen-up commands and compares exported drill/contour counts with the PCB-derived expectations.
+Run `scripts/export_circuitpro_u4_packages.py audit DESIGN_DIR` or `export DESIGN_DIR --force`. Do not duplicate PCB facts in a package manifest. The shared discovery helper reads each `.kicad_pcb`, derives used copper and mask sides, detects the semantic `Coupon.Cuts` user layer, and independently counts source drill hits and closed coupon contours. Repository convention exports panel files when present; otherwise it exports the matching routing-only primary PCB plus any generated production variants. The exporter refills only an isolated staging copy before DRC and plotting, so neither the primary source nor the generated unfilled zone definition is mutated. It owns KiCad CLI arguments, target-aligned filenames, empty-drill omission, package replacement, and source-freshness comparison. Its validator counts connected Gerber contours rather than raw pen-up commands and compares exported drill/contour counts with the PCB-derived expectations.
 
 Before delivery:
 

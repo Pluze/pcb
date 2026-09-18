@@ -21,6 +21,7 @@ MAX_ERROR_CHARS = 1200
 MANUFACTURING_AUDIT_SCRIPTS = (
     "pcb_workflow.py",
     "manage_manufacturing_outputs.py",
+    "generate_copper_pour_variants.py",
     "manufacturing_discovery.py",
     "manufacturing_transaction.py",
     "export_circuitpro_u4_packages.py",
@@ -101,7 +102,12 @@ def topology_designs(designs: list[Path], explicitly_selected: bool) -> list[Pat
     return selected
 
 
-def phase_plan(root: Path, goal: str, apply: bool, designs: list[Path]) -> list[Phase]:
+def phase_plan(
+    root: Path,
+    goal: str,
+    apply: bool,
+    designs: list[Path],
+) -> list[Phase]:
     scripts = root / ".agents" / "skills" / "kicad-konnect" / "scripts"
     manage = scripts / "manage_manufacturing_outputs.py"
     growth = (
@@ -179,9 +185,16 @@ def phase_inputs(root: Path, designs: list[Path], phase: Phase) -> list[Path]:
         return paths
     if phase.name == "manufacturing-audit":
         paths.extend(scripts / name for name in MANUFACTURING_AUDIT_SCRIPTS)
+        paths.append(
+            root / ".agents" / "skills" / "kicad-pcb-layout"
+            / "references" / "repository-defaults.json"
+        )
     else:
         return paths
     for design in designs:
+        project_config = design / ".konnect" / "project.json"
+        if project_config.is_file():
+            paths.append(project_config)
         for candidate in design.rglob("*"):
             if not candidate.is_file() or any(part in EXCLUDED_DIRS for part in candidate.parts):
                 continue
@@ -307,7 +320,13 @@ def run_phase(phase: Phase, root: Path, log_path: Path) -> dict:
     return outcome
 
 
-def execute(root: Path, goal: str, designs: list[Path], apply: bool, no_cache: bool) -> dict:
+def execute(
+    root: Path,
+    goal: str,
+    designs: list[Path],
+    apply: bool,
+    no_cache: bool,
+) -> dict:
     if goal == "manufacturing-refresh" and not apply:
         raise ValueError("manufacturing-refresh changes generated outputs; pass --apply")
     work = root / ".work" / "pcb-workflow"

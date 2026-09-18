@@ -7,7 +7,7 @@ Each immediate child of `Designs/` is one self-contained hardware design.
 - Use one meaningful stable name for the directory and matching `.kicad_pro`, `.kicad_sch`, and `.kicad_pcb` files.
 - Keep `README.md` for purpose, inputs, assumptions, component strategy, fabrication intent, and unresolved design risks.
 - Keep `VALIDATION.md` as a compact current snapshot of dated, reproducible evidence and explicit waivers—not a chronological log.
-- Keep intentional previews under `assets/`; use `.konnect/project.json` only for durable project-specific tool preferences.
+- Keep intentional previews under `assets/`; use `.konnect/project.json` only for durable project-specific tool preferences or explicit exceptions. Common PCB workflow, layout, routing, line-width, copper-pour, and manufacturing defaults live in `.agents/skills/kicad-pcb-layout/references/repository-defaults.json` and must not be copied into each design.
 - For generated schematics, keep the version-controlled pin-level topology contract beside the project.
 
 ## Engineering boundary

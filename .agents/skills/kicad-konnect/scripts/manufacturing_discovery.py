@@ -41,13 +41,15 @@ def discover_boards(design: Path) -> list[Path]:
     design = design.resolve()
     if not design.is_dir():
         raise ValueError(f"not a design directory: {design}")
-    children = sorted((design / "variants").glob("*.kicad_pcb"))
-    children += sorted((design / "panels").glob("*.kicad_pcb"))
-    if children:
-        return children
     primary = design / f"{design.name}.kicad_pcb"
     if not primary.is_file():
         raise ValueError(f"missing primary PCB: {primary}")
+    panels = sorted((design / "panels").glob("*.kicad_pcb"))
+    if panels:
+        return panels
+    variants = sorted((design / "variants").glob("*.kicad_pcb"))
+    if variants:
+        return [primary, *variants]
     return [primary]
 
 

@@ -80,10 +80,13 @@ def validate(cli_python: str, package: dict, directory: Path) -> None:
 def build(cli: Path, package: dict, root: Path) -> Path:
     staging = root / package["name"]
     staging.mkdir()
+    board = root / f"{package['name']}-export.kicad_pcb"
+    shutil.copy2(package["board"], board)
     drc_report = root / f"{package['name']}-drc.json"
     run([
-        str(cli), "pcb", "drc", "--output", str(drc_report), "--format", "json",
-        "--severity-error", "--exit-code-violations", str(package["board"]),
+        str(cli), "pcb", "drc", "--refill-zones", "--save-board",
+        "--output", str(drc_report), "--format", "json",
+        "--severity-error", "--exit-code-violations", str(board),
     ])
     for index, layer in enumerate(package["layers"]):
         raw = root / f"{package['name']}-layer-{index}"
@@ -91,7 +94,7 @@ def build(cli: Path, package: dict, root: Path) -> Path:
         run([
             str(cli), "pcb", "export", "gerbers", "--output", str(raw),
             "--layers", layer, "--no-x2", "--no-netlist", "--check-zones",
-            str(package["board"]),
+            str(board),
         ])
         artwork = [
             path for path in raw.iterdir()
@@ -108,7 +111,7 @@ def build(cli: Path, package: dict, root: Path) -> Path:
         str(cli), "pcb", "export", "drill", "--output", str(raw_drill),
         "--format", "excellon", "--drill-origin", "absolute",
         "--excellon-zeros-format", "decimal", "--excellon-oval-format", "route",
-        "--excellon-units", "mm", "--excellon-separate-th", str(package["board"]),
+        "--excellon-units", "mm", "--excellon-separate-th", str(board),
     ])
     for pattern, target in (("*-PTH.drl", "DrillPlated.drl"), ("*-NPTH.drl", "DrillUnplated.drl")):
         matches = list(raw_drill.glob(pattern))

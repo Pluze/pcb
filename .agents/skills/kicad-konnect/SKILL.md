@@ -125,6 +125,7 @@ For computer-use fallback, load the current automation documentation before the 
 - `scripts/schematic_topology_router.py`: dry-run and apply topology-driven orthogonal schematic routing.
 - `scripts/validate_schematic_design.py`: topology, geometry, connectivity, ERC, and render validation.
 - `scripts/manufacturing_discovery.py`: discovers publishable boards by repository convention and derives copper sides, mask sides, semantic coupon-cut layers, and drill/contour counts directly from each `.kicad_pcb`.
+- `scripts/generate_copper_pour_variants.py`: treats each design's primary PCB as the routing-only source and, during manufacturing generation, derives the repo-default with-pour variant unless that design explicitly opts out.
 - `scripts/manufacturing_transaction.py`: stages a complete manufacturing-directory batch, preserves a temporary backup, and rolls every installed or displaced directory back when an in-process replacement fails.
 - `scripts/export_circuitpro_u4_packages.py`: PCB-driven RP 1.x export with target-aligned naming, DRC, validation, source-freshness audit, and recoverable replacement.
 - `scripts/validate_circuitpro_u4_package.py`: exact package/file, Gerber/Excellon termination structure, attribute, connected-contour, and drill-hit validation for supported U4 profiles.
@@ -134,6 +135,8 @@ For computer-use fallback, load the current automation documentation before the 
 - `scripts/benchmark_pcb_workflow.py`: counterbalanced A/B coverage for full and scoped manufacturing checks, unchanged repeats, topology-driven schematic validation, new generated PCB plus DRC, and release readiness. Reports stay under ignored `.work/pcb-workflow/benchmarks/`.
 
 These helpers are repository-wide capabilities only where they add behavior beyond the currently discovered Konnect surface. Revalidate that boundary before use or maintenance. Their design-specific input and measured results belong under the target design; their general algorithms and rules remain with the skill.
+
+The repository layout profile owns the default copper-pour parameters and dual-output policy. Keep every design's matching primary PCB routing-only and require it to pass DRC with zero unconnected items; a zone must never repair an incomplete routing system. During manufacturing generation, export the primary board as the default package, derive a single with-pour board under `variants/`, refill and DRC an isolated staging copy, and export that package separately. Generate both by default. A design that intentionally has no suitable pour net or must remain routing-only may set only the narrow `manufacturing.copper_pour_variants.enabled: false` exception in `.konnect/project.json`, with a reason.
 
 ## CircuitPro RP 1.x compatibility exports
 

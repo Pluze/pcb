@@ -7,6 +7,8 @@ description: Place, route, and verify KiCad PCBs with emphasis on manufacturabil
 
 Use this skill after schematic connectivity and footprints are sufficiently stable.
 
+For this repository, load [references/repository-defaults.json](references/repository-defaults.json) before placement or routing. Its selected profile owns the common machine-readable workflow, layout, routing, line-width, copper-pour, and manufacturing defaults. Apply it unless the design documents a genuine design- or process-specific exception. Keep such exceptions narrow; do not duplicate the common profile into a design's `.konnect/project.json`.
+
 ## Placement
 
 - Synchronize from the verified schematic and confirm footprint/net counts.
@@ -35,12 +37,14 @@ After every change, refill the zones and inspect the actual filled geometry at r
 
 ## Routing and verification
 
+- Complete and DRC the explicit routing system without copper pour first. Require zero unconnected items before evaluating a pour; a zone must not be the only connection for a net.
 - Route critical, switching, sensitive analog, clock, differential, and power nets in an electrically appropriate order.
 - Keep high-current and fast loops compact and returns continuous. Apply creepage/clearance appropriate to actual voltages.
 - On a one-layer SMT layout, reserve short width transitions only for pad escape, then widen immediately. Refill ground zones after each local placement/routing change and verify that narrow channels do not create isolated islands, starved thermals, or apparently connected but electrically separate ground regions.
 - Before full rerouting, close the editor, remove old routing, prove zero stale segments/vias/zones as applicable, and generate fresh router input.
 - After routing, count layers, vias, jumpers, and unrouted items. Refill zones and run DRC.
 - Inspect 2D, 3D, silkscreen, solder mask, copper-to-edge clearance, connector accessibility, and realistic assembly scale.
+- Generate committed 3D PCB previews with the repository profile's `visual_assets` settings. The default is an orthogonal, basic-quality PNG with a transparent background and no floor so decorative post-processing cannot obscure copper, silkscreen, or component geometry with hard shadows. If the basic renderer draws filled copper above 3D bodies, use the profile's restrained camera-light high-quality fallback; keep the floor disabled and verify that shadows do not cross important copper or silkscreen. Use perspective or a floor only when the design explicitly needs a presentation render, and keep that render distinct from the engineering preview.
 
 Record measured results and waivers in the design's `VALIDATION.md`; keep reusable policy here.
 

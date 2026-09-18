@@ -32,9 +32,14 @@ class ManufacturingManagerTests(unittest.TestCase):
             argv = [str(SCRIPT), "audit", "--root", str(root), "--design", "Beta"]
             with mock.patch.object(sys, "argv", argv):
                 self.assertEqual(manager.main(), 0)
-        self.assertEqual(run.call_count, len(manager.EXPORTERS))
+        self.assertEqual(run.call_count, len(manager.EXPORTERS) + 1)
         for call in run.call_args_list:
-            self.assertEqual(Path(call.args[0][-1]).name, "Beta")
+            command = call.args[0]
+            self.assertEqual(Path(command[3]).name, "Beta")
+        self.assertEqual(
+            Path(run.call_args_list[0].args[0][1]).name,
+            manager.VARIANT_GENERATOR,
+        )
 
     @mock.patch.object(manager.subprocess, "run")
     def test_unknown_selected_design_fails_before_export(self, run: mock.Mock) -> None:

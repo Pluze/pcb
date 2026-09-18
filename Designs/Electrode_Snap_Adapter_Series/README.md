@@ -51,6 +51,8 @@ The dashed 150 x 100 mm stock outline and four expected fiducial circles in the 
 | --- | --- |
 | ![Seventeen-adapter panel, front](assets/panel-17up-150x100-front.png) | ![Seventeen-adapter panel, back](assets/panel-17up-150x100-back.png) |
 
+These reader-facing previews show the seventeen finished coupons after separation. They are rendered from a temporary view-only copy that maps `Coupon.Cuts` to board outlines and omits the continuous processing rail; the manufacturing PCB and exported layer mapping remain unchanged.
+
 ## LPKF ProtoLaser U4 fabrication files
 
 CircuitPro RP 1.x-compatible Gerber and Excellon packages are under [`fabrication/u4/`](fabrication/u4/). Open exactly one single-variant directory and import its four machine files together; the multi-coupon panel uses five files because its continuous processing boundary and seventeen coupon-cut contours must remain separate. Machine-input basenames match the installed CircuitPro targets (`TopLayer`, `BottomLayer`, `BoardOutline`, optional `CutInside`, and `DrillPlated`) so the import mapping is directly auditable. The directories intentionally contain no ZIP archive, Gerber job file, empty drill output, or documentation file. The parent fabrication README gives the exact layer mapping, complete-rub-out requirement, double-sided registration guidance, and the required non-plated center-hole solder operation.
