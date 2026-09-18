@@ -23,7 +23,7 @@ Start searches in the owning repository directory or known configuration path. D
 ## Control tool output
 
 - Set an explicit output budget appropriate to the question; default to no more than roughly 4,000 tokens from one call and lower it for simple checks.
-- Ask tools for counts, summaries, selected fields, or matching records instead of entire documents. For structured data, select keys with the native query mechanism.
+- Ask tools for counts, summaries, selected fields, or matching records instead of entire documents. For structured data, select keys with the native query mechanism. Treat claims of compact output as untrusted until measured: removing a protocol envelope does not make a payload context-efficient. Prefer a semantic summary with a retained detail log when the tool exposes both.
 - Store unavoidable verbose output in the operating-system temporary directory or ignored `.work/<task>/`. Inspect its exit status and summary first, then open only actionable sections. A report path is not evidence unless the producing command succeeded.
 - Do not load complete session logs, generated KiCad files, filled-zone polygon diffs, tool catalogs, or schemas when a structured query, semantic validator, or targeted excerpt answers the question. Review generated changes through source parameters, parsers, DRC/ERC, counts, and renders; inspect raw generated text only around unexplained differences.
 - For Git review, first classify files with name-status and statistics. Review ordinary source diffs directly. For large deterministic generated sections, account for the entire file through generation inputs plus semantic validation, while separately inspecting every hand-authored or unexplained change.
@@ -60,6 +60,8 @@ At each major phase boundary, keep a compact working checkpoint containing:
 - validation result and remaining warning;
 - blocker, if any; and
 - next action.
+
+For live-editor work, the checkpoint also records the exact project/board, whether the editor must be open or closed, the resolved CLI path, the IPC endpoint or its absence, and the selected execution plane (live IPC, closed-file, CLI, or GUI fallback). Context compaction does not authorize rediscovering or switching that plane while these facts remain valid.
 
 Do not repeat the checkpoint in every commentary update. Start a new task only when the next deliverable is genuinely independent and the checkpoint is sufficient to resume it.
 

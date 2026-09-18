@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import os
 import subprocess
 import sys
 import tempfile
@@ -106,6 +107,18 @@ class WorkflowTests(unittest.TestCase):
             workflow.cache_key(phase, [alpha]),
             workflow.cache_key(phase, [alpha, beta]),
         )
+
+    def test_run_history_is_bounded_without_touching_live_process(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            runs = Path(directory)
+            for index in range(6):
+                (runs / f"20260918-00000{index}-99999{index}").mkdir()
+            live = runs / f"20000101-000000-{os.getpid()}"
+            live.mkdir()
+            workflow.prune_run_history(runs, keep=2)
+            remaining = {path.name for path in runs.iterdir()}
+            self.assertIn(live.name, remaining)
+            self.assertEqual(len(remaining), 3)
 
     def test_failure_classification_is_narrow_and_actionable(self) -> None:
         failure_class, action = workflow.classify_failure(134, "", "")

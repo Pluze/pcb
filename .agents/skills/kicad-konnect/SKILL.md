@@ -19,7 +19,7 @@ python3 .agents/skills/kicad-konnect/scripts/pcb_workflow.py release-ready
 python3 .agents/skills/kicad-konnect/scripts/pcb_workflow.py release-ready --apply
 ```
 
-The controller discovers active KiCad designs, derives a transient phase plan, keeps full per-phase logs under ignored `.work/pcb-workflow/`, emits one compact JSON record, and reuses successful read-only evidence only while its inputs remain unchanged. Use repeated `--design NAME` only to narrow an explicitly scoped request. `--apply` authorizes manufacturing-output refresh inside the requested goal; it never authorizes a commit, push, history rewrite, or unrelated design edit.
+The controller discovers active KiCad designs, derives a transient phase plan, keeps a bounded set of full per-phase logs under ignored `.work/pcb-workflow/`, emits one compact JSON record, and reuses successful read-only evidence only while its inputs remain unchanged. Run directories use timestamp plus process ID only to isolate concurrent work; completed or abandoned history is pruned while live process IDs are protected. Benchmark reports use one stable file per scenario and order instead of an append-only history. Use repeated `--design NAME` only to narrow an explicitly scoped request. `--apply` authorizes manufacturing-output refresh inside the requested goal; it never authorizes a commit, push, history rewrite, or unrelated design edit.
 
 Inspect a phase log only when the compact failure cannot be resolved from its error classification. Use the lower-level helpers directly for development, a narrowly selected package, or diagnosis of the failed phase.
 
@@ -66,7 +66,7 @@ When direct MCP invocation is unavailable in the active environment, use `script
 
 ```bash
 python3 .agents/skills/kicad-konnect/scripts/konnect_mcp_client.py \
-  --board Designs/Example/Example.kicad_pcb --compact --strict \
+  --board Designs/Example/Example.kicad_pcb --strict \
   callseq '[
     {"name":"load_toolset","arguments":{"name":["placement","verification"]}},
     {"name":"score_placement","arguments":{}},
@@ -75,7 +75,8 @@ python3 .agents/skills/kicad-konnect/scripts/konnect_mcp_client.py \
 ```
 
 - Pass the board once and let the helper inject it only where accepted.
-- Use `--compact` for concise output and `--strict` when a tool error must fail automation.
+- The default output is a bounded one-line semantic summary for capability discovery, broad inspection, and mutation receipts. It preserves complete responses in an operating-system temporary log named by the result.
+- Use `--raw` only for diagnosing the adapter itself. For an engineering decision that needs omitted fields, inspect the named detail log with a targeted query rather than returning the entire payload to the model.
 - Batch related reads or edits. Prefer one mutating batch followed by one verification batch.
 - Do not retry an unchanged failed call; change its preconditions or tool choice.
 
@@ -86,6 +87,8 @@ Separate three independent dependencies before using verification or live-editor
 1. **KiCad CLI location.** On a standard macOS KiCad installation, check `/Applications/KiCad/KiCad.app/Contents/MacOS/kicad-cli` first and confirm its version. Also inspect `~/Documents/KiCad/<version>/3rdparty/plugins/com_github_mixelpixx_konnect/settings.json`; a saved `kicad_cli` absolute path is stronger evidence than the invoking shell's `PATH`.
 2. **Child-process permission.** A valid CLI may still be unable to run a board operation inside a managed sandbox. Konnect can report this as `kicad-cli exited with -1: no diagnostic output`, while a direct sandboxed invocation may abort with exit 134. Do not misdiagnose that signature as a missing binary merely because the app-bundle directory is absent from `PATH`. Run the same absolute-path command once in the permitted execution context; if it succeeds there, use that context for CLI-backed Konnect calls.
 3. **Live IPC.** Read `ipc_socket_path` and check the live UI separately. An empty socket setting or `No KiCad IPC socket found` affects live-editor operations such as zone refill, but it does not explain a file-backed CLI DRC failure. Configure KiCad API/socket discovery when live tools are required, or choose the documented file/GUI fallback.
+
+The local client automatically uses an explicit `KICAD_API_SOCKET`, or the one unique `/tmp/kicad/api*.sock` socket candidate when the environment has none. It never guesses among multiple sockets, and Konnect still verifies whether the candidate responds. Preserve the requested board/project check because a reachable socket does not by itself prove the intended editor is active.
 
 Use targeted known paths before broad recursive searches. On macOS, the CLI is five levels below `/Applications` in the standard bundle, so shallow `find` limits can produce a false negative. Verify a producer's exit status before trying to read its expected report. In zsh diagnostic snippets, use a variable such as `cli_rc`; `status` is a reserved read-only parameter.
 
@@ -103,11 +106,12 @@ For every failed or anomalous call, keep a compact task-local ledger containing 
 Known routing for recurring signatures:
 
 - `run_drc` with exit `-1` and no diagnostics: verify configured CLI path, reproduce with the absolute CLI command, then compare sandboxed and permitted execution. Do not edit `PATH` unless configuration inspection actually shows path resolution is the problem.
-- `refill_zones` with no IPC: use KiCad's refill command in the PCB editor, save, and run DRC with zone refill enabled; do not repeatedly call the live tool.
+- A unique KiCad socket exists but its ping reports `Permission denied`: rerun the same narrowly scoped client call once in the permitted execution context. If IPC works there, keep that execution plane for the bounded live-edit session; do not translate a sandbox denial into repeated GUI opening.
+- `refill_zones` with no IPC: close the editor and use `kicad-cli pcb drc --refill-zones --save-board` when source mutation is intended, or run `scripts/headless_pcb_review.py` to refill and validate an isolated temporary copy without changing the source. GUI refill is only a final fallback when both supported paths are proven unavailable.
 - `launch_kicad_ui` with empty arguments: treat it as launching the manager, not as proof that the intended board is open or IPC is configured. Pass the inspected project path when the schema supports it, otherwise open the exact file once through the GUI fallback.
 - A close action followed by a GUI `procNotFound` observation error may mean the application exited successfully. Re-inspect application state before repeating the close.
 
-For computer-use fallback, load the current automation documentation before the first nontrivial action and use the documented accessibility methods exactly; do not guess method names or argument shapes. After the exact project is open, batch refill, DRC, save, and close rather than reopening editors for each step.
+For computer-use fallback, load the current automation documentation before the first nontrivial action and use the documented accessibility methods exactly; do not guess method names or argument shapes. GUI is not a fallback for zone refill, DRC, 2-D review, or 3-D review: prefer `scripts/headless_pcb_review.py`, which copies the board to an operating-system temporary directory, refills and saves only that copy, runs JSON DRC, exports a fitted SVG, renders a top PNG, retains detailed logs, proves the source hash unchanged, and returns one compact record. Inspect its PNG and SVG directly. Within one design iteration, close the editor once and apply every currently known file-backed change before headless review. Use at most one GUI transaction only for an operation or visual question that the discovered IPC, CLI, file, and render paths cannot answer. Do not reopen between individual geometry fixes, inspect the full accessibility tree after each keystroke, or navigate the file picker repeatedly. If one batched open or close fails, re-inspect/rebind once; a second failure requires changing mechanism rather than another click sequence.
 
 ## Safe file and editor behavior
 
@@ -132,6 +136,7 @@ For computer-use fallback, load the current automation documentation before the 
 - `scripts/export_kapton_lightburn_templates.py`: PCB-driven millimetre DXF export from inferred solder-mask openings plus `Edge.Cuts`, with source-freshness audit and fitted AutoCAD extents/viewport metadata. KiCad's raw DXF can contain valid geometry but appear blank in AutoCAD because it omits extents and leaves the active view at a 1000 mm default around the origin.
 - `scripts/manage_manufacturing_outputs.py`: repository-wide discovery and audit/export of U4 and LightBurn outputs for every active design.
 - `scripts/pcb_workflow.py`: goal-level, self-discovered orchestration with compact JSON results, ignored phase logs, input-hash caching, and explicit mutation authority.
+- `scripts/headless_pcb_review.py`: isolated-copy zone refill, JSON DRC, fitted 2-D SVG, and 3-D PNG review with no KiCad GUI or source mutation.
 - `scripts/benchmark_pcb_workflow.py`: counterbalanced A/B coverage for full and scoped manufacturing checks, unchanged repeats, topology-driven schematic validation, new generated PCB plus DRC, and release readiness. Reports stay under ignored `.work/pcb-workflow/benchmarks/`.
 
 These helpers are repository-wide capabilities only where they add behavior beyond the currently discovered Konnect surface. Revalidate that boundary before use or maintenance. Their design-specific input and measured results belong under the target design; their general algorithms and rules remain with the skill.

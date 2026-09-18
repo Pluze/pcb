@@ -23,6 +23,8 @@ SCENARIOS = (
     "repeat-unchanged",
     "schematic-validate",
     "new-pcb",
+    "existing-pcb-inspection",
+    "headless-pcb-review",
     "release-ready",
 )
 EXPORTERS = (
@@ -167,6 +169,82 @@ def scenario_commands(
         ]
         metadata["designs"] = [board_name]
         metadata["candidate_extra_coverage"] = ["atomic-write-after-drc"]
+    elif scenario == "existing-pcb-inspection":
+        design = next(
+            (item for item in designs if item.name == "Ionto_Current_Source_Core"),
+            designs[0],
+        )
+        client = scripts / "konnect_mcp_client.py"
+        board = design / f"{design.name}.kicad_pcb"
+        steps = json.dumps([
+            {
+                "name": "load_toolset",
+                "arguments": {
+                    "name": [
+                        "pcb_board",
+                        "pcb_components",
+                        "pcb_routing",
+                        "placement",
+                        "verification",
+                        "pcb_export",
+                    ]
+                },
+            },
+            {"name": "get_board_info", "arguments": {}},
+            {"name": "get_board_extents", "arguments": {}},
+        ], separators=(",", ":"))
+        common = (
+            sys.executable, str(client), "--board", str(board), "--strict",
+        )
+        baseline = [(*common, "--raw", "callseq", steps)]
+        candidate = [(*common, "callseq", steps)]
+        metadata["designs"] = [design.name]
+        metadata["candidate_extra_coverage"] = [
+            "bounded-semantic-tool-output",
+            "full-response-log",
+        ]
+    elif scenario == "headless-pcb-review":
+        design = next(
+            (item for item in designs if item.name == "Ionto_Current_Source_Core"),
+            designs[0],
+        )
+        cli = find_kicad_cli()
+        board = design / f"{design.name}.kicad_pcb"
+        baseline_dir = scratch / "baseline-review"
+        candidate_dir = scratch / "candidate-review"
+        baseline_dir.mkdir()
+        baseline_board = baseline_dir / "review.kicad_pcb"
+        shutil.copy2(board, baseline_board)
+        baseline = [
+            (
+                str(cli), "pcb", "drc", "--refill-zones", "--save-board",
+                "--format", "json", "--output", str(baseline_dir / "drc.json"),
+                str(baseline_board),
+            ),
+            (
+                str(cli), "pcb", "export", "svg", "--check-zones",
+                "--fit-page-to-board", "--exclude-drawing-sheet", "--mode-single",
+                "--layers", "F.Cu,F.Silkscreen,Edge.Cuts", "--output",
+                str(baseline_dir / "review.svg"), str(baseline_board),
+            ),
+            (
+                str(cli), "pcb", "render", "--side", "top", "--width", "1200",
+                "--height", "900", "--quality", "basic", "--output",
+                str(baseline_dir / "review.png"), str(baseline_board),
+            ),
+        ]
+        candidate = [
+            (
+                sys.executable, str(scripts / "headless_pcb_review.py"), str(board),
+                "--output-dir", str(candidate_dir), "--kicad-cli", str(cli),
+            )
+        ]
+        metadata["designs"] = [design.name]
+        metadata["candidate_extra_coverage"] = [
+            "source-unchanged-proof",
+            "parsed-drc-summary",
+            "retained-per-phase-logs",
+        ]
     else:
         raise ValueError(f"unsupported scenario: {scenario}")
     return baseline, candidate, metadata
@@ -218,6 +296,12 @@ def reduction(a: int | float, b: int | float) -> float | None:
     return round((1 - b / a) * 100, 1) if a else None
 
 
+def remove_legacy_reports(report_dir: Path) -> None:
+    for path in report_dir.glob("*.json"):
+        if len(path.name) > 9 and path.name[:8].isdigit() and path.name[8] == "-":
+            path.unlink()
+
+
 def run_benchmark(root: Path, scenario: str, selected: str | None, order: str) -> dict:
     with tempfile.TemporaryDirectory(prefix=f"pcb-benchmark-{scenario}-") as directory:
         scratch = Path(directory)
@@ -256,9 +340,12 @@ def main() -> int:
         result = run_benchmark(root, args.scenario, args.design, args.order)
         report_dir = (args.report_dir or root / ".work" / "pcb-workflow" / "benchmarks").resolve()
         report_dir.mkdir(parents=True, exist_ok=True)
-        stamp = dt.datetime.now().strftime("%Y%m%d-%H%M%S")
-        report = report_dir / f"{stamp}-{args.scenario}-{args.order}.json"
-        report.write_text(json.dumps(result, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        remove_legacy_reports(report_dir)
+        result["recorded_at"] = dt.datetime.now().astimezone().isoformat(timespec="seconds")
+        report = report_dir / f"{args.scenario}-{args.order}.json"
+        temporary = report.with_suffix(f".{os.getpid()}.tmp")
+        temporary.write_text(json.dumps(result, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        temporary.replace(report)
         result["report"] = report.relative_to(root).as_posix() if report.is_relative_to(root) else report.name
     except (OSError, ValueError) as exc:
         result = {"status": "fail", "scenario": args.scenario, "error": str(exc)[:MAX_ERROR_CHARS]}

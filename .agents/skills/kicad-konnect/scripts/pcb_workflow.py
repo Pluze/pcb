@@ -18,6 +18,7 @@ from pathlib import Path
 EXCLUDED_DIRS = {".git", ".work", "__pycache__", ".pytest_cache"}
 GOALS = ("schematic-validate", "validate", "manufacturing-refresh", "release-ready")
 MAX_ERROR_CHARS = 1200
+RUN_HISTORY_LIMIT = 12
 MANUFACTURING_AUDIT_SCRIPTS = (
     "pcb_workflow.py",
     "manage_manufacturing_outputs.py",
@@ -245,6 +246,36 @@ def cache_key(phase: Phase, designs: list[Path]) -> str:
     return f"{phase.name}:{scope}"
 
 
+def run_process_is_alive(path: Path) -> bool:
+    try:
+        pid = int(path.name.rsplit("-", 1)[1])
+    except (IndexError, ValueError):
+        return False
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True
+    return True
+
+
+def prune_run_history(runs_dir: Path, keep: int = RUN_HISTORY_LIMIT) -> None:
+    """Bound completed or abandoned run logs without touching live processes."""
+    if not runs_dir.is_dir():
+        return
+    inactive = sorted(
+        (
+            path for path in runs_dir.iterdir()
+            if path.is_dir() and not run_process_is_alive(path)
+        ),
+        key=lambda path: path.name,
+        reverse=True,
+    )
+    for path in inactive[max(0, keep):]:
+        shutil.rmtree(path)
+
+
 def error_excerpt(stdout: str, stderr: str) -> str:
     source = stderr if stderr.strip() else stdout
     lines = [line.strip() for line in source.splitlines() if line.strip()]
@@ -376,6 +407,7 @@ def execute(
             json.dumps(details, indent=2, sort_keys=True) + "\n",
             encoding="utf-8",
         )
+        prune_run_history(run_dir.parent)
     result = {
         "status": status,
         "goal": goal,

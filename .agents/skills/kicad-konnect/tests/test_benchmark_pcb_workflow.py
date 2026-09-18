@@ -39,6 +39,8 @@ class BenchmarkTests(unittest.TestCase):
                 "repeat-unchanged": (4, 1),
                 "schematic-validate": (2, 1),
                 "new-pcb": (2, 1),
+                "existing-pcb-inspection": (1, 1),
+                "headless-pcb-review": (3, 1),
                 "release-ready": (6, 1),
             }
             for scenario, counts in expected.items():
@@ -57,6 +59,17 @@ class BenchmarkTests(unittest.TestCase):
         self.assertEqual(benchmark.reduction(6, 1), 83.3)
         self.assertEqual(benchmark.reduction(100, 25), 75.0)
         self.assertIsNone(benchmark.reduction(0, 0))
+
+    def test_legacy_timestamped_reports_are_removed(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            report_dir = Path(directory)
+            legacy = report_dir / "20260918-102454-new-pcb-a-b.json"
+            current = report_dir / "new-pcb-a-b.json"
+            legacy.write_text("{}\n", encoding="utf-8")
+            current.write_text("{}\n", encoding="utf-8")
+            benchmark.remove_legacy_reports(report_dir)
+            self.assertFalse(legacy.exists())
+            self.assertTrue(current.exists())
 
 
 if __name__ == "__main__":

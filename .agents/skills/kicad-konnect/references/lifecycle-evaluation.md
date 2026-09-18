@@ -27,6 +27,8 @@ Design a mixed power/analog or feedback-controlled circuit with protection, test
 
 Create a board from a verified schematic under mechanical and fabrication constraints. Include both a simple generated geometry case and a placement/routing case. Evaluate footprint mapping, fixed mechanical items, placement feasibility, routing layers, widths, vias or jumpers, zones, DRC, connectivity, silkscreen, assembly access, and 2D/3D review. A generated file must pass KiCad parsing and DRC before final placement in the project.
 
+For an existing-board mutation, also record editor opens/closes, GUI calls and failures, zone-refill transactions, IPC/CLI calls, and context compactions. Treat GUI DRC when the configured CLI is usable, or repeated open/refill/save/close cycles without a newly established precondition, as an efficiency failure even when the final board passes. The candidate workflow should batch all currently known file-backed edits before one refill and visual-review transaction.
+
 ### Existing-design verification
 
 Seed or select realistic defects: stale routing, wrong connector orientation, pin/pad mismatch, shorted power/return, unfilled or over-close zones, open coupon contours, missing drill output, stale manufacturing files, or ambiguous schematic geometry. The agent must discover the applicable tool surface, classify the failure, change a relevant precondition, and extend the narrowest validator when the defect was previously invisible.
