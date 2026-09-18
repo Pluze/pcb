@@ -40,6 +40,10 @@ The schematic preserves the classroom circuit's recognizable power rails, 555 pi
 
 ![Schematic](assets/schematic.png)
 
+## Manufacturing Outputs
+
+[`fabrication/u4/LM555_LED_Flasher/`](fabrication/u4/LM555_LED_Flasher/) contains the PCB-derived CircuitPro package. [`fabrication/lightburn/LM555_LED_Flasher/`](fabrication/lightburn/LM555_LED_Flasher/) contains the PCB-derived front solder-mask DXF. The shared exporter infers the used copper side, mask side, and absence of drill data directly from the KiCad PCB.
+
 ## Limitations
 
 This is a reference and experimental design, not a production release. Confirm the exact LM555 variant, supply range, LED, capacitor voltage rating, connector polarity, fabrication rules, and assembly process before building it.

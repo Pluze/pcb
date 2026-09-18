@@ -1,5 +1,5 @@
-# Archived TPS61040 implementation
+# Archived TPS61040 Design
 
-This directory preserves the complete pre-R1218 schematic implementation before the 2026-09-16 redesign. It uses a TPS61040 compliance supply plus a TLV431/MCP6001/2N7002 current sink.
+This directory preserves the superseded TPS61040 schematic, PCB, BOM, and renders for comparison only. The active R1218 design is two directories above, and repository manufacturing discovery intentionally ignores `archive/`.
 
-The files here are retained as a recoverable engineering reference. They are not the active project schematic; the active design now uses `R1218N041A-TR-FE`.
+The archived files parse in KiCad 10.0.6. Their earlier snapshot recorded ERC 0/0 and PCB DRC 0 errors with two footprint-library mismatch warnings; those results are historical and are not part of the active release audit.

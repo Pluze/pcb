@@ -35,7 +35,7 @@ Each immediate child of `Designs/` is one self-contained hardware design.
 
 ## Completion Evidence
 
-Record actual counts and results instead of qualitative claims: ERC errors and warnings, DRC errors/warnings/unconnected items, layer usage, minimum and preferred track widths, via count, jumper count, and remaining waivers. Inspect both schematic and board renders after the final edit.
+Keep `VALIDATION.md` as a compact snapshot of current reproducible results and concrete unresolved exceptions, not a chronological log. Record actual counts instead of qualitative claims: ERC/DRC results, layer use, routing and drill counts, and remaining waivers. Replace superseded evidence rather than appending process history. Inspect both schematic and board renders after the final edit.
 
 Keep only design-specific facts and evidence inside an individual design directory. If a rule, method, checklist item, layout lesson, validation technique, or electronics principle would help another board, promote it to the repository instructions or the relevant reusable skill and leave only the measured result, design-specific rationale, or explicit exception locally.
 

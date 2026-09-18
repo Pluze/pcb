@@ -35,9 +35,29 @@ The 20/30 mm, 15/25 mm, and 10/18.75 mm pairs are taken from the centered circle
 
 The base project PCB is the largest 8/20/30 mm member. The four independently manufacturable family members are under `variants/`. The schematic is intentionally empty because this is a geometry-defined, single-net passive adapter.
 
+## 150 x 100 mm material-efficient panel
+
+[`panels/Snap_Adapter_17up_150x100.kicad_pcb`](panels/Snap_Adapter_17up_150x100.kicad_pcb) places 17 adapters on one 150 x 100 mm raw FR4 sheet while retaining at least three copies of every family member. Finished outlines are separated by 2 mm:
+
+- first row: four 30 mm boards;
+- second row: four 25 mm boards and one 18.75 mm board;
+- third row: four 18.75 mm boards and four 10 mm boards.
+
+This yields four 30 mm, four 25 mm, five 18.75 mm, and four 10 mm boards. The finished-board area is 8,257.8125 mm², or 55.05% of the raw material area, compared with 39.53% for exactly three of each. The 17 coupon-cut contours occupy a 129 x 77.75 mm bounding box. A single 130.5 x 79.25 mm processing boundary surrounds them with a 0.75 mm rail and is the only geometry on `Edge.Cuts`. CircuitPro's documented automatic-fiducial example uses 1.5 mm fiducials whose centers are 4 mm outside `BoardOutline`, so the corresponding outside envelope is 140 x 88.75 mm. Centering leaves 5 mm horizontally and 5.625 mm vertically from the fiducial outer edges to the material edges.
+
+The dashed 150 x 100 mm stock outline and four expected fiducial circles in the KiCad panel are on `Dwgs.User`; they are visual planning aids only. The seventeen finished coupon contours are on `User.1` (`Coupon.Cuts`) so they can be imported separately from the continuous `BoardOutline`. Import the five panel machine files, then let CircuitPro create the actual fiducials from `BoardOutline` at 4 mm distance. Do not assign `Dwgs.User` as a manufacturing layer.
+
+| Front | Back |
+| --- | --- |
+| ![Seventeen-adapter panel, front](assets/panel-17up-150x100-front.png) | ![Seventeen-adapter panel, back](assets/panel-17up-150x100-back.png) |
+
 ## LPKF ProtoLaser U4 fabrication files
 
-CircuitPro RP 1.x-compatible Gerber and Excellon packages for all four variants are under [`fabrication/u4/`](fabrication/u4/). Open exactly one variant directory and import its four machine files together. The machine-input directories intentionally contain no ZIP archive, Gerber job file, empty drill output, or documentation file. The parent fabrication README gives the exact layer mapping, complete-rub-out requirement, double-sided registration guidance, and the required non-plated center-hole solder operation.
+CircuitPro RP 1.x-compatible Gerber and Excellon packages are under [`fabrication/u4/`](fabrication/u4/). Open exactly one single-variant directory and import its four machine files together; the multi-coupon panel uses five files because its continuous processing boundary and seventeen coupon-cut contours must remain separate. Machine-input basenames match the installed CircuitPro targets (`TopLayer`, `BottomLayer`, `BoardOutline`, optional `CutInside`, and `DrillPlated`) so the import mapping is directly auditable. The directories intentionally contain no ZIP archive, Gerber job file, empty drill output, or documentation file. The parent fabrication README gives the exact layer mapping, complete-rub-out requirement, double-sided registration guidance, and the required non-plated center-hole solder operation.
+
+## LightBurn solder-mask templates
+
+[`fabrication/lightburn/`](fabrication/lightburn/) contains millimetre DXF files generated from `F.Mask` or `B.Mask` together with `Edge.Cuts`. Import the DXF for the required side into LightBurn. Front files are top-view geometry; back files remain in KiCad board coordinates, so apply LightBurn's horizontal flip only when the chosen tape-transfer orientation requires it. Laser settings are intentionally not stored in these geometry files.
 
 ## Regenerate the complete family
 
@@ -64,6 +84,32 @@ python3 .agents/skills/kicad-pcb-layout/scripts/generate_circular_contact_board.
   --force
 ```
 
+Regenerate the 17-adapter panel:
+
+```sh
+python3 .agents/skills/kicad-pcb-layout/scripts/generate_circular_contact_panel.py \
+  --csv Designs/Electrode_Snap_Adapter_Series/series.csv \
+  --output Designs/Electrode_Snap_Adapter_Series/panels/Snap_Adapter_17up_150x100.kicad_pcb \
+  --count-each 3 --gap 2 \
+  --stock-width 150 --stock-height 100 \
+  --fiducial-distance 4 --fiducial-diameter 1.5 --stock-edge-margin 5 \
+  --processing-rail 0.75 \
+  --row 30:4 \
+  --row 25:4,18.75:1 \
+  --row 18.75:4,10:4 \
+  --via-diameter 2 --via-drill 1 \
+  --force
+```
+
+Regenerate or audit the U4 and LightBurn manufacturing outputs directly from the KiCad PCB files:
+
+```sh
+python3 .agents/skills/kicad-konnect/scripts/export_circuitpro_u4_packages.py \
+  export Designs/Electrode_Snap_Adapter_Series --force
+python3 .agents/skills/kicad-konnect/scripts/export_kapton_lightburn_templates.py \
+  export Designs/Electrode_Snap_Adapter_Series --force
+```
+
 For another size, the only required geometry inputs remain `FRONT_DIAMETER BACK_DIAMETER BOARD_SIDE`. Keep the front value at 8 mm for this snap-connector family unless the connector changes.
 
 ## Assembly
@@ -74,4 +120,4 @@ For another size, the only required geometry inputs remain `FRONT_DIAMETER BACK_
 4. Measure low resistance between the front and back pads before attaching the film electrode.
 5. Attach the thin-film electrode concentrically to the matching back pad and solder the snap connector to the 8 mm front pad.
 
-The 10 mm board has only 1 mm copper-to-edge margin around the 8 mm front pad. It meets the stated minimum size but is the least tolerant of cutter runout, registration error, and edge damage; manufacture it first as a process coupon before making a larger batch.
+The 10 mm board has only 1 mm copper-to-edge margin around the 8 mm front pad. It meets the stated minimum size but is the least tolerant of cutter runout, registration error, and edge damage.

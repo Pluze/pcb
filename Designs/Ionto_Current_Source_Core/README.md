@@ -72,9 +72,11 @@ The active board is 30 × 22 mm. All eight footprints and all routed copper are 
 
 Main BAT traces are 0.8 mm, the switching-node trunk is 1.0 mm with short 0.4 mm pad escapes, stimulation routing is 0.6 mm, and the minimum local escape width is 0.25 mm. These widths are intended for a hand-soldered prototype and are not a substitute for a thermal/current review at a chosen copper weight.
 
-For the soldermask-free LPKF U4 prototype, the front GND zone uses 0.50 mm clearance to other-net copper, 0.50 mm minimum fill thickness, a 0.50 mm thermal-relief gap, and 0.50 mm thermal spokes. The larger moat is intentional hand-soldering margin around signal, switching, and stimulation copper; it does not change same-net GND connections. C1 pad 2 is a deliberate local solid-zone connection because the small 0805 pad cannot accept two 0.50 mm thermal spokes in the available geometry; this preserves electrical continuity without reducing clearance to any other net. Refill and visually inspect the zone before milling, and increase the values if the selected isolation tool or a process coupon shows inadequate separation.
+For the soldermask-free LPKF U4 prototype, the front GND zone uses 0.50 mm clearance to other-net copper, 0.50 mm minimum fill thickness, a 0.50 mm thermal-relief gap, and 0.50 mm thermal spokes. The larger moat is intentional hand-soldering margin around signal, switching, and stimulation copper; it does not change same-net GND connections. C1 pad 2 is a deliberate local solid-zone connection because the small 0805 pad cannot accept two 0.50 mm thermal spokes in the available geometry; this preserves electrical continuity without reducing clearance to any other net.
 
-CircuitPro-ready single-sided U4 Gerber output and its process notes are under [`fabrication/u4/`](fabrication/u4/). Import the two files under `fabrication/u4/machine_input/`; that machine-input directory intentionally contains only front copper and the board outline because the design has no back copper, vias, or drilled holes.
+CircuitPro-ready single-sided U4 Gerber output is under [`fabrication/u4/Ionto_Current_Source_Core/`](fabrication/u4/Ionto_Current_Source_Core/). It contains only `TopLayer.gtl` and `BoardOutline.gm1` because the PCB has no back copper, vias, or drilled holes.
+
+The LightBurn template is under [`fabrication/lightburn/`](fabrication/lightburn/). `FrontMask_TopView.dxf` is a millimetre vector export of `F.Mask` plus `Edge.Cuts`; laser settings are intentionally not stored in the geometry file.
 
 ## Schematic contract and archive
 

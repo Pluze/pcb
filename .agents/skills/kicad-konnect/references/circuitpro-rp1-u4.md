@@ -16,10 +16,21 @@ A file can preview at the correct size while still be unusable by the workflow i
 | Front copper | `.gtl` | `GerberX` | `TopLayer` |
 | Back copper | `.gbl` | `GerberX` | `BottomLayer` |
 | Finished outer perimeter | `.gm1` | `GerberX` | `BoardOutline` |
+| Repeated coupon/depanel contours inside one processing perimeter | `.gm2` | `GerberX` | `CutInside` |
 | Electrical through-hole or via drill | `.drl` | `Excellon` | `DrillPlated` |
 | Mechanical-only non-plated drill | `.drl` | `Excellon` | `DrillUnplated` |
 
-Do not leave `Target` on an imported name such as `Top.gtl`, `Profile.gm1`, or `Drill_1mm.drl`; those are unclassified user layers. Use `CutInside` only for a deliberate internal cutout, not the finished perimeter. Do not manually mirror back copper; the double-sided CircuitPro workflow owns the material turn and registration transform.
+Do not leave `Target` on an imported filename; that creates an unclassified user layer even when the geometry preview looks correct. `BoardOutline` is the single outer processing/containment perimeter. `CutInside` is for deliberate contours inside that perimeter, including repeated coupon/depanel contours; it is not the target for a single board's finished outer perimeter. Do not manually mirror back copper; the double-sided CircuitPro workflow owns the material turn and registration transform.
+
+For a multi-coupon panel, do not assign several disjoint coupon perimeters to `BoardOutline`. CircuitPro RP 1.x uses that layer as the containment boundary for top/bottom structuring; disjoint finished-board rectangles can make valid copper appear outside the interpreted outline and suppress its toolpaths. Export one continuous processing perimeter as `BoardOutline`, export all coupon contours in a second Gerber mapped to `CutInside`, and generate those cuts only after drilling and both copper sides are complete. Operator evidence from CircuitPro RP 1.0 Advanced confirms that `BoardOutline` and `CutInside` are separate installed targets.
+
+If `Structure Top` or `Structure Bottom` reports objects outside the board outline, check the import contract before changing copper Gerbers:
+
+1. prove that exactly one continuous closed contour is mapped to `BoardOutline`;
+2. prove that all coupon/depanel contours are in the separate file mapped to `CutInside`;
+3. confirm the copper extents are contained by the `BoardOutline` centerline;
+4. discard the current import and re-import the corrected package so stale layer assignments cannot survive;
+5. if the installed workflow still interprets `CutInside` as excluded structure area, disable or defer that layer while computing top/bottom structure, then enable it only for the final cutting phase.
 
 ## Why these formats
 
@@ -38,7 +49,7 @@ Before using a helper or CLI fallback, load the current Konnect `pcb_export` and
 
 Gerber requirements:
 
-- export only the copper sides actually used plus `Edge.Cuts`;
+- export only the copper sides actually used plus `Edge.Cuts`; for a multi-coupon panel, also export the dedicated coupon-cut user layer as a separate Gerber;
 - retain Protel extensions;
 - disable X2 attributes with `--no-x2`;
 - disable netlist attributes with `--no-netlist`;
@@ -60,15 +71,16 @@ In decimal mode, a displayed drill-artwork size such as `1 x 1 mm` is the geomet
 
 Use a separate machine-input directory for each independently imported board or variant. The directory name identifies the design or variant, so filenames inside it can remain short, ASCII-only, and role-based.
 
-Preferred names:
+For the verified CircuitPro RP 1.0 workflow, make each basename identical to its target so the operator can audit the import row without translating names:
 
-- `Top.gtl`
-- `Bottom.gbl`
-- `Profile.gm1`
-- `Drill_PTH.drl` for a general electrical drill file
-- `Drill_NPTH.drl` for a non-empty mechanical drill file
+- `TopLayer.gtl`
+- `BottomLayer.gbl`
+- `BoardOutline.gm1`
+- `CutInside.gm2` only when deliberate internal or coupon/depanel contours exist
+- `DrillPlated.drl` for non-empty electrical drill data
+- `DrillUnplated.drl` only for non-empty mechanical drill data
 
-A dimension-specific name such as `Drill_1mm.drl` is acceptable only when the file is proven to contain exactly that one tool size. If more sizes are introduced, rename by role rather than preserving a false dimension claim.
+Do not encode a current tool diameter into the drill filename. A role name remains true when another drill diameter is added later.
 
 The extensions are the conventional Protel/KiCad role hints; the basename is for operator clarity. Never depend on the filename alone for manufacturing behavior: verify the CircuitPro `Target` explicitly.
 
@@ -80,6 +92,8 @@ Classify holes by electrical design intent, not by whether this fabrication run 
 
 ## Delivery validation
 
+Run `scripts/export_circuitpro_u4_packages.py audit DESIGN_DIR` or `export DESIGN_DIR --force`. Do not duplicate PCB facts in a package manifest. The shared discovery helper reads each `.kicad_pcb`, derives used copper and mask sides, detects the semantic `Coupon.Cuts` user layer, and independently counts source drill hits and closed coupon contours. Repository convention selects `variants/*.kicad_pcb` and `panels/*.kicad_pcb` when present; otherwise it selects the design's matching root PCB. The exporter owns KiCad CLI arguments, target-aligned filenames, empty-drill omission, package replacement, and source-freshness comparison. Its validator counts connected Gerber contours rather than raw pen-up commands and compares exported drill/contour counts with the PCB-derived expectations.
+
 Before delivery:
 
 1. preserve any previous delivered package in a recoverable operating-system temporary backup;
@@ -88,7 +102,8 @@ Before delivery:
 4. reject Gerbers containing X2 object/net attributes such as `TO,N,...`;
 5. confirm each drill file contains at least one tool and coordinate;
 6. confirm copper, drill hits, and profile use the same absolute origin and intended overlay;
-7. record the expected displayed extents, noting that profile display bounds may include the Gerber drawing aperture while the cut follows its centerline;
-8. in CircuitPro, verify every `Format` and `Target`, preview the overlay, add the workflow's registration features outside the finished profile, process both copper sides before cutting the profile, and accept the result only after a physical coupon when the material/process combination is new.
+7. for a panel, confirm the board-outline Gerber contains exactly one closed contour and the cut-inside Gerber contains the expected number of coupon contours;
+8. record the expected displayed extents, noting that profile display bounds may include the Gerber drawing aperture while the cut follows its centerline;
+9. in CircuitPro, verify every `Format` and `Target`, preview the overlay, add the workflow's registration features outside the finished profile, and process both copper sides before cutting the profile.
 
-Future automation should wrap the verified KiCad CLI calls, normalize filenames by role, omit empty drill outputs, and fail on unexpected files or attributes. It must not silently overwrite a prior package, infer PTH/NPTH from the no-THP workflow name, or declare fabrication readiness without DRC, overlay review, and a process coupon.
+The exporter refuses to replace an existing package without `--force`, preserves the previous package in an operating-system temporary backup, and never infers PTH/NPTH from the no-THP workflow name.

@@ -5,8 +5,9 @@ Reference and experimental PCB designs built with KiCad, plus reusable agent wor
 ## Contents
 
 - [`Designs/LM555_LED_Flasher`](Designs/LM555_LED_Flasher): an all-SMT, single-sided 555 timer LED flasher adapted from a classroom reference.
-- [`.agents/skills/kicad-konnect`](.agents/skills/kicad-konnect): a reference-driven KiCad/Konnect design workflow.
-- [`.agents/skills/pcb-repository-governance`](.agents/skills/pcb-repository-governance): repository organization, project creation, history, cleanup, and process-improvement guidance.
+- [`Designs/Ionto_Current_Source_Core`](Designs/Ionto_Current_Source_Core): a single-channel R1218 constant-current boost prototype.
+- [`Designs/Electrode_Snap_Adapter_Series`](Designs/Electrode_Snap_Adapter_Series): four circular-contact adapters and a 17-up U4 panel.
+- [`.agents/skills`](.agents/skills): reusable KiCad, PCB-layout, component, and repository tooling.
 
 ## Design Philosophy
 
@@ -14,16 +15,7 @@ Design intent is made explicit before editing. Schematic connectivity, footprint
 
 The workflows draw on KiCad's official IPC model and public agent-oriented KiCad projects, while keeping tool-specific claims tied to verified local behavior. See each design's `VALIDATION.md` for measured results and remaining warnings.
 
-## Workflow References
-
-- [KiCad IPC API documentation](https://dev-docs.kicad.org/en/apis-and-binding/ipc-api/)
-- [Konnect](https://github.com/mixelpixx/Konnect)
-- [KiCAD-MCP-Server](https://github.com/mixelpixx/KiCAD-MCP-Server)
-- [KiCad MCP Pro skills](https://github.com/oaslananka/kicad-mcp-pro/tree/main/skills)
-- [mcp-server-kicad skills](https://github.com/ProductOfAmerica/mcp-server-kicad/tree/main/skills)
-- [kcd KiCad skill](https://github.com/AlexSabaka/kcd/tree/main/skills/kicad)
-
-These are references, not vendored dependencies. This repository's rules are based on its own verified tool behavior and design goals.
+All active designs use the repository manufacturing exporter. It discovers the publishable KiCad boards, derives layer, mask, drill, and panel-cut intent directly from each `.kicad_pcb`, and audits checked-in U4 and LightBurn outputs against a fresh export.
 
 ## Status
 
