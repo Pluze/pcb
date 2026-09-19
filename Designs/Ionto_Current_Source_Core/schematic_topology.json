@@ -1,0 +1,39 @@
+{
+  "schematic": "Designs/Ionto_Current_Source_Core/Ionto_Current_Source_Core.kicad_sch",
+  "grid_mm": 1.27,
+  "escape_mm": 2.54,
+  "symbol_clearance_mm": 1.27,
+  "routing_margin_mm": 12.7,
+  "bend_cost": 40,
+  "schema_version": 1,
+  "source_of_truth": "pin-level connectivity; KiCad remains authoritative for reviewed symbol placement and presentation",
+  "blocks": {
+    "r1218_constant_current_core": ["J1", "C1", "L1", "U1", "C2", "R1", "J2", "J3"]
+  },
+  "nets": [
+    {
+      "name": "VBAT",
+      "endpoints": ["J1.1", "C1.1", "L1.1", "U1.3", "J3.1", "#PWR005.1"]
+    },
+    {
+      "name": "CE_CONTROL",
+      "endpoints": ["J3.2", "U1.1"]
+    },
+    {
+      "name": "LX",
+      "endpoints": ["L1.2", "U1.4"]
+    },
+    {
+      "name": "VOUT_STIM_POS",
+      "endpoints": ["U1.2", "C2.1", "J2.1"]
+    },
+    {
+      "name": "VFB_STIM_NEG",
+      "endpoints": ["U1.6", "J2.2", "R1.1"]
+    },
+    {
+      "name": "GND",
+      "endpoints": ["J1.2", "C1.2", "U1.5", "C2.2", "R1.2", "#PWR001.1", "#PWR002.1", "#PWR003.1", "#PWR004.1", "#PWR006.1"]
+    }
+  ]
+}
