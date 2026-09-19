@@ -1,0 +1,25 @@
+name: repository-hygiene
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  growth-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Check tracked files and reachable history
+        run: python3 tools/pcbflow/repository/scripts/check_repository_growth.py --all-tracked --history
+      - name: Run tool regressions
+        env:
+          PYTHONDONTWRITEBYTECODE: "1"
+        run: |
+          python3 -m unittest discover -s tools/pcbflow/kicad/tests -q
+          python3 -m unittest discover -s tools/pcbflow/routing/tests -q
+          python3 -m unittest discover -s tools/pcbflow/tests -q
