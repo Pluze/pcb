@@ -1,0 +1,4 @@
+#!/bin/sh
+set -eu
+
+exec python3 tools/pcbflow/repository/scripts/check_repository_growth.py --report-worktree
