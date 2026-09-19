@@ -4,6 +4,7 @@ Reference and experimental PCB designs built with KiCad, plus reusable agent wor
 
 ## Contents
 
+- [`Designs/LM555_LED_Flasher`](Designs/LM555_LED_Flasher): an all-SMT, single-sided 555 timer LED flasher adapted from a classroom reference.
 - [`tools/pcbflow`](tools/pcbflow): public CLI, reusable engines and tests for humans and agents.
 - [`.agents/skills`](.agents/skills): engineering methods and shared design defaults.
 
